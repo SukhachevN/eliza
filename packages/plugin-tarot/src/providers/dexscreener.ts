@@ -149,9 +149,13 @@ const dexscreenerProvider: Provider = {
         ${filteredSolanaTokens
             .map(
                 (token) =>
-                    `${token.baseToken.name} ${token.baseToken.symbol} - ${token.priceUsd} USD, ${token.volume.h24} USD/24h, market cap: ${token.marketCap} USD, price change 24h: ${token.priceChange.h24} USD/24h`
+                    `${token.baseToken.name} ($${token.baseToken.symbol})
+                    Price: $${Number(token.priceUsd).toLocaleString()}
+                    Volume (24h): $${Number(token.volume.h24).toLocaleString()}
+                    Market Cap: $${Number(token.marketCap).toLocaleString()}
+                    Price Change (24h): %${token.priceChange.h24.toLocaleString()}`
             )
-            .join("\n")}
+            .join("\n\n")}
         `;
 
         await _runtime.cacheManager.set("new-solana-tokens", result, {

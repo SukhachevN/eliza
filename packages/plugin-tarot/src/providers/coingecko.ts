@@ -29,6 +29,17 @@ type Token = {
     total_volume: number;
 };
 
+const formatToken = (token: Token): string => {
+    return [
+        `${token.name} ($${token.symbol.toUpperCase()})`,
+        `Price: $${token.current_price.toLocaleString()}`,
+        `Market Cap: $${token.market_cap.toLocaleString()}`,
+        `Volume: $${token.total_volume.toLocaleString()}`,
+        `24h Change: ${token.price_change_percentage_24h.toFixed(2)}% ($${token.price_change_24h.toLocaleString()})`,
+        `Rank: #${token.market_cap_rank}`,
+    ].join(" | ");
+};
+
 const coingeckoProvider: Provider = {
     get: async (_runtime: IAgentRuntime, _message: Memory, _state?: State) => {
         const topTokens = await _runtime.cacheManager.get("top-tokens");
@@ -52,17 +63,13 @@ const coingeckoProvider: Provider = {
             bitcoinAndEthereumResponse.json(),
         ])) as [Token[], Token[]];
 
-        const result = `Top Solana tokens:\n${topSolanaTokens
-            .map(
-                (token) =>
-                    `${token.name} ${token.symbol} - ${token.current_price} USD, market cap: ${token.market_cap} USD, total volume: ${token.total_volume} USD, price change 24h: ${token.price_change_24h} USD, price change percentage 24h: ${token.price_change_percentage_24h}%, market cap rank: ${token.market_cap_rank}`
-            )
-            .join("\n")}\n\nBitcoin and Ethereum:\n${bitcoinAndEthereum
-            .map(
-                (token) =>
-                    `${token.name} ${token.symbol} - ${token.current_price} USD, market cap: ${token.market_cap} USD, total volume: ${token.total_volume} USD, price change 24h: ${token.price_change_24h} USD, price change percentage 24h: ${token.price_change_percentage_24h}%, market cap rank: ${token.market_cap_rank}`
-            )
-            .join("\n")}`;
+        const result = [
+            "Top Solana Tokens:",
+            ...topSolanaTokens.map(formatToken),
+            "",
+            "Bitcoin and Ethereum:",
+            ...bitcoinAndEthereum.map(formatToken),
+        ].join("\n");
 
         await _runtime.cacheManager.set("top-tokens", result, {
             expires: Number(process.env.REFETCH_INTERVAL) * 60 * 1000,
