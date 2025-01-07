@@ -47,9 +47,9 @@ const generate: Action = {
         Explore the energy of the following tokens:
         ${suitabletokens}
 
-        Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards.
+        Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
 
-        IMPORTANT: The response must be a valid JSON, strictly following the format below. No additional text, comments, or formatting is allowed.
+        IMPORTANT: The response must be a valid JSON, strictly following the format below. No additional text, comments, or formatting is allowed. The response should align with the structure and rules provided but does not need to mimic the style or content of the examples.
 
         JSON structure:
         {
@@ -68,7 +68,7 @@ const generate: Action = {
         - minor-arcana: ["10", "3", "5", "7", "9", "king", "page", "2", "4", "6", "8", "ace", "knight", "queen"]
 
         Rules:
-        1. Always return exactly 3 unique cards.
+        1. Always return exactly 3 unique cards, chosen randomly for each response.
         2. Ensure the cards represent a variety of themes, avoiding overuse of specific cards (e.g., "wheel-of-fortune").
         3. Prediction must link the meanings of the drawn cards to the behavior or trends of the tokens.
         4. Use token symbols (e.g., $BTC) in the prediction.
@@ -82,16 +82,6 @@ const generate: Action = {
         Example 1:
         {
           "cards": [
-            {"type":"major-arcana","value":"wheel-of-fortune"},
-            {"type":"minor-arcana","subtype":"wands","value":"ace"},
-            {"type":"major-arcana","value":"hermit"}
-          ],
-          "prediction": "Wheel of Fortune suggests $BTC is in flux; a chance to accumulate during quieter times. Ace of Wands points to growth for $ETH. Hermit advises $SOL holders to wait for clarity before taking action."
-        }
-
-        Example 2:
-        {
-          "cards": [
             {"type":"major-arcana","value":"justice"},
             {"type":"minor-arcana","subtype":"cups","value":"queen"},
             {"type":"major-arcana","value":"tower"}
@@ -99,7 +89,7 @@ const generate: Action = {
           "prediction": "Justice advises $BTC holders to stay balanced. Queen of Cups suggests $ETH could bring emotional fulfillment. Tower warns $SOL may face sudden changes; buy at dips."
         }
 
-        Example 3:
+        Example 2:
         {
           "cards": [
             {"type":"major-arcana","value":"star"},
@@ -109,7 +99,7 @@ const generate: Action = {
           "prediction": "The Star illuminates hope for $BTC. Knight of Pentacles signals $ETH moving steadily. Death suggests $SOL may undergo transformation; opportunities lie in the change."
         }
 
-        Example 4:
+        Example 3:
         {
           "cards": [
             {"type":"major-arcana","value":"chariot"},
@@ -117,37 +107,53 @@ const generate: Action = {
             {"type":"major-arcana","value":"temperance"}
           ],
           "prediction": "The Chariot encourages bold moves for $BTC. King of Swords highlights strategic opportunities in $ETH. Temperance suggests $SOL requires patience and balance."
-        }`;
+        }
 
-        const llmResponse = await generateText({
-            runtime: _runtime,
-            context: prompt,
-            modelClass: ModelClass.SMALL,
-        });
+        Note: While the response should follow the structure and rules outlined above, the specific content, style, and card choices must be random and unique for each response. Creativity and variation in the response are encouraged, as long as the JSON structure and rules are adhered to.
+        `;
 
         let response;
-        try {
-            const cleanedResponse = llmResponse
-                .trim()
-                .replace(/^```json\s*/, "")
-                .replace(/\s*```$/, "")
-                .replace(/[\u200B-\u200D\uFEFF]/g, "");
+        let attempts = 0;
+        const maxAttempts = 3;
 
-            response = JSON.parse(cleanedResponse) as {
-                cards: { type: string; subtype?: string; value: string }[];
-                prediction: string;
-            };
+        while (attempts < maxAttempts) {
+            try {
+                const llmResponse = await generateText({
+                    runtime: _runtime,
+                    context: prompt,
+                    modelClass: ModelClass.SMALL,
+                });
 
-            if (
-                !response.cards ||
-                !Array.isArray(response.cards) ||
-                !response.prediction
-            ) {
-                throw new Error("Invalid response structure");
+                const cleanedResponse = llmResponse
+                    .trim()
+                    .replace(/^```json\s*/, "")
+                    .replace(/\s*```$/, "")
+                    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+                response = JSON.parse(cleanedResponse) as {
+                    cards: { type: string; subtype?: string; value: string }[];
+                    prediction: string;
+                };
+
+                if (
+                    !response.cards ||
+                    !Array.isArray(response.cards) ||
+                    !response.prediction
+                ) {
+                    throw new Error("Invalid response structure");
+                }
+
+                break;
+            } catch (error) {
+                attempts++;
+                console.error(`Attempt ${attempts} failed:`, error);
+
+                if (attempts >= maxAttempts) {
+                    throw new Error(
+                        "Failed to generate valid tarot reading after multiple attempts"
+                    );
+                }
             }
-        } catch (error) {
-            console.error("Failed to parse LLM response:", error);
-            throw new Error("Failed to generate valid tarot reading");
         }
 
         const canvas = createCanvas(3058, 1720);
@@ -215,7 +221,7 @@ const generate: Action = {
             fs.mkdirSync(imageDir, { recursive: true });
         }
 
-        const filepath = path.join(imageDir, `${filename}.png`);
+        const filepath = path.join(imageDir, filename);
 
         fs.writeFileSync(filepath, buffer);
 
