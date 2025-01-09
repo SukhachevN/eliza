@@ -320,8 +320,10 @@ export class TwitterPostClient {
                 async () =>
                     await client.twitterClient.sendNoteTweet(
                         content,
-                        tweetId,
-                        media ? [{ data: media, mediaType: "image/png" }] : []
+                        tweetId
+                        // media
+                        //     ? [{ data: media, mediaType: "image/png" }]
+                        //     : undefined
                     )
             );
 
@@ -356,10 +358,10 @@ export class TwitterPostClient {
                 async () =>
                     await client.twitterClient.sendTweet(
                         content,
-                        tweetId,
-                        media
-                            ? [{ data: media, mediaType: "image/png" }]
-                            : undefined
+                        tweetId
+                        // media
+                        //     ? [{ data: media, mediaType: "image/png" }]
+                        //     : undefined
                     )
             );
             const body = await standardTweetResult.json();
