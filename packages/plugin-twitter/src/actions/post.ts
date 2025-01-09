@@ -12,6 +12,7 @@ import {
 import { Scraper } from "agent-twitter-client";
 import { tweetTemplate } from "../templates";
 import { isTweetContent, TweetSchema } from "../types";
+import { getTarotPrediction } from "@elizaos/plugin-tarot";
 
 async function composeTweet(
     runtime: IAgentRuntime,
@@ -60,7 +61,7 @@ async function composeTweet(
     }
 }
 
-async function postTweet(content: string): Promise<boolean> {
+async function postTweet(content: string, media: Buffer): Promise<boolean> {
     try {
         const scraper = new Scraper();
         const username = process.env.TWITTER_USERNAME;
@@ -84,7 +85,12 @@ async function postTweet(content: string): Promise<boolean> {
 
         // Send the tweet
         elizaLogger.log("Attempting to send tweet:", content);
-        const result = await scraper.sendTweet(content);
+        const result = await scraper.sendTweet(content, undefined, [
+            {
+                data: media,
+                mediaType: "image/png",
+            },
+        ]);
 
         const body = await result.json();
         elizaLogger.log("Tweet response:", body);
@@ -141,7 +147,8 @@ export const postAction: Action = {
     ): Promise<boolean> => {
         try {
             // Generate tweet content using context
-            const tweetContent = await composeTweet(runtime, message, state);
+            const { buffer, prediction: tweetContent } =
+                await getTarotPrediction(runtime);
 
             if (!tweetContent) {
                 elizaLogger.error("No content generated for tweet");
@@ -161,7 +168,7 @@ export const postAction: Action = {
                 return true;
             }
 
-            return await postTweet(tweetContent);
+            return await postTweet(tweetContent, buffer);
         } catch (error) {
             elizaLogger.error("Error in post action:", error);
             return false;

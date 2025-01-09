@@ -20,6 +20,7 @@
     ],
     "dependencies": {
         "@elizaos/core": "workspace:*",
+        "@elizaos/plugin-tarot": "workspace:*",
         "agent-twitter-client": "0.0.17",
         "tsup": "8.3.5"
     },
