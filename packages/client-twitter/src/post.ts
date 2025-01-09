@@ -320,10 +320,10 @@ export class TwitterPostClient {
                 async () =>
                     await client.twitterClient.sendNoteTweet(
                         content,
-                        tweetId
-                        // media
-                        //     ? [{ data: media, mediaType: "image/png" }]
-                        //     : undefined
+                        tweetId,
+                        media
+                            ? [{ data: media, mediaType: "image/png" }]
+                            : undefined
                     )
             );
 
@@ -358,10 +358,10 @@ export class TwitterPostClient {
                 async () =>
                     await client.twitterClient.sendTweet(
                         content,
-                        tweetId
-                        // media
-                        //     ? [{ data: media, mediaType: "image/png" }]
-                        //     : undefined
+                        tweetId,
+                        media
+                            ? [{ data: media, mediaType: "image/png" }]
+                            : undefined
                     )
             );
             const body = await standardTweetResult.json();
@@ -371,7 +371,10 @@ export class TwitterPostClient {
             }
             return body.data.create_tweet.tweet_results.result;
         } catch (error) {
-            elizaLogger.error("Error sending standard Tweet:", error);
+            elizaLogger.error(
+                "Error sending standard Tweet:",
+                error?.message ?? error
+            );
             throw error;
         }
     }
