@@ -6,6 +6,7 @@ import {
     Memory,
     ModelClass,
     State,
+    composeContext,
 } from "@elizaos/core";
 import { createCanvas, loadImage } from "canvas";
 import path from "path";
@@ -59,24 +60,22 @@ export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
-    const maxTweetLength = (state.maxTweetLength as number) || 180;
-
-    const context = `
+    const contextTemplate = `
     # Areas of Expertise
-    ${state.knowledge}
+    {{knowledge}}
 
-    # About ${state.agentName} (@${state.twitterUserName}):
-    ${state.bio}
-    ${state.lore}
-    ${state.topics}
+    # About {{agentName}} (@{{twitterUserName}}):
+    {{bio}}
+    {{lore}}
+    {{topics}}
 
-    ${state.providers}
+    {{providers}}
 
-    ${state.characterPostExamples}
+    {{characterPostExamples}}
 
-    ${state.postDirections}
+    {{postDirections}}
 
-    Task: Explore the energy of the top solana tokens, new solana tokens, Bitcoin and Ethereum. Generate a post in the voice and style and perspective of ${state.agentName} @${state.twitterUserName}. Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
+    Task: Explore the energy of the top solana tokens, new solana tokens, Bitcoin and Ethereum. Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}}. Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
 
     IMPORTANT: The response must be a valid JSON, strictly following the format below. No additional text, comments, or formatting is allowed. The response should align with the structure and rules provided but does not need to mimic the style or content of the examples.
 
@@ -89,7 +88,7 @@ export const getTarotPrediction = async (
           "value": string (see allowed values below)
         }
       ],
-      "prediction": string (max ${maxTweetLength} characters, summarizing insights tied to the cards and tokens, using token symbols, avoiding numbers, and leaning towards buying during lows)
+      "prediction": string (max {{maxTweetLength}} characters, summarizing insights tied to the cards and tokens, using token symbols, avoiding numbers, and leaning towards buying during lows)
     }
 
     Allowed card values:
@@ -103,7 +102,7 @@ export const getTarotPrediction = async (
     4. Use token symbols (e.g., $BTC) in the prediction.
     5. Avoid using numbers in the prediction; use descriptive and metaphorical language instead.
     6. Lean towards suggesting buying tokens during potential lows as part of the interpretation.
-    7. The prediction must MUST be less than ${state.maxTweetLength}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.
+    7. The prediction must MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.
     8. Response must be in pure JSON format.
 
     Examples of valid responses:
@@ -144,6 +143,11 @@ export const getTarotPrediction = async (
     let response;
     let attempts = 0;
     const maxAttempts = 3;
+
+    const context = composeContext({
+        state,
+        template: contextTemplate,
+    });
 
     console.log("context", context);
 
