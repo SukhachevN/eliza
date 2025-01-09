@@ -22,6 +22,48 @@ const cardsY = 442;
 const cardsX = 635;
 const cardsHeight = 836;
 
+const MAJOR_ARCANA = [
+    "chariot",
+    "empress",
+    "hierophant",
+    "lovers",
+    "strength",
+    "wheel-of-fortune",
+    "death",
+    "fool",
+    "high-priestress",
+    "magician",
+    "sun",
+    "world",
+    "devil",
+    "hanged-man",
+    "judgement",
+    "moon",
+    "temperance",
+    "emperor",
+    "hermit",
+    "justice",
+    "star",
+    "tower",
+];
+const MINOR_ARCANA_VALUES = [
+    "10",
+    "3",
+    "5",
+    "7",
+    "9",
+    "king",
+    "page",
+    "2",
+    "4",
+    "6",
+    "8",
+    "ace",
+    "knight",
+    "queen",
+];
+const MINOR_ARCANA_SUBTYPES = ["wands", "cups", "swords", "pentacles"];
+
 /**
  * Truncate text to fit within the Twitter character limit, ensuring it ends at a complete sentence.
  */
@@ -56,10 +98,66 @@ function truncateToCompleteSentence(
     return hardTruncated + "...";
 }
 
+// Добавить функцию для генерации случайных карт
+function generateRandomCards() {
+    const cards = [];
+    const usedCards = new Set();
+
+    while (cards.length < 3) {
+        const isMajorArcana = Math.random() < 0.5;
+
+        if (isMajorArcana) {
+            const value =
+                MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
+            const cardKey = `major-${value}`;
+
+            if (!usedCards.has(cardKey)) {
+                cards.push({
+                    type: "major-arcana",
+                    value,
+                });
+                usedCards.add(cardKey);
+            }
+        } else {
+            const subtype =
+                MINOR_ARCANA_SUBTYPES[
+                    Math.floor(Math.random() * MINOR_ARCANA_SUBTYPES.length)
+                ];
+            const value =
+                MINOR_ARCANA_VALUES[
+                    Math.floor(Math.random() * MINOR_ARCANA_VALUES.length)
+                ];
+            const cardKey = `minor-${subtype}-${value}`;
+
+            if (!usedCards.has(cardKey)) {
+                cards.push({
+                    type: "minor-arcana",
+                    subtype,
+                    value,
+                });
+                usedCards.add(cardKey);
+            }
+        }
+    }
+
+    return cards;
+}
+
 export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
+    const cards = generateRandomCards();
+
+    const cardsDescription = cards
+        .map((card) => {
+            if (card.type === "major-arcana") {
+                return `${card.value} (Major Arcana)`;
+            }
+            return `${card.value} of ${card.subtype} (Minor Arcana)`;
+        })
+        .join("\n");
+
     const contextTemplate = `
     # Areas of Expertise
     {{knowledge}}
@@ -75,107 +173,75 @@ export const getTarotPrediction = async (
 
     {{postDirections}}
 
-    Task: Explore the energy of the top solana tokens, new solana tokens, Bitcoin and Ethereum. Generate a post in the voice and style and perspective of {{agentName}} @{{twitterUserName}}. Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
+    Task: Generate a 3-day prediction based on the provided tarot cards and their meanings for top solana tokens, new solana tokens, Bitcoin and Ethereum. Write in the voice and style of {{agentName}} @{{twitterUserName}}.
 
-    IMPORTANT: The response must be a valid JSON, strictly following the format below. No additional text, comments, or formatting is allowed. The response should align with the structure and rules provided but does not need to mimic the style or content of the examples.
+    The drawn cards are:
+    ${cardsDescription}
 
-    JSON structure:
-    {
-      "cards": [
-        {
-          "type": "major-arcana" | "minor-arcana",
-          "subtype": "wands" | "cups" | "swords" | "pentacles" (required only for minor-arcana),
-          "value": string (see allowed values below)
-        }
-      ],
-      "prediction": string (max {{maxTweetLength}} characters, summarizing insights tied to the cards and tokens, using token symbols, avoiding numbers, and leaning towards buying during lows)
-    }
-
-    Allowed card values:
-    - major-arcana: ["chariot", "empress", "hierophant", "lovers", "strength", "wheel-of-fortune", "death", "fool", "high-priestress", "magician", "sun", "world", "devil", "hanged-man", "judgement", "moon", "temperance", "emperor", "hermit", "justice", "star", "tower"]
-    - minor-arcana: ["10", "3", "5", "7", "9", "king", "page", "2", "4", "6", "8", "ace", "knight", "queen"]
-
-    Rules:
-    1. Always return exactly 3 unique cards, chosen randomly for each response.
-    2. Ensure the cards represent a variety of themes, avoiding overuse of specific cards (e.g., "wheel-of-fortune").
-    3. Prediction must link the meanings of the drawn cards to the behavior or trends of the tokens.
-    4. Use token symbols (e.g., $BTC) in the prediction.
-    5. Avoid using numbers in the prediction; use descriptive and metaphorical language instead.
-    6. Lean towards suggesting buying tokens during potential lows as part of the interpretation.
-    7. The prediction must MUST be less than {{maxTweetLength}}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.
-    8. Response must be in pure JSON format.
+    Rules for the prediction:
+    1. Link the meanings of the provided cards to the behavior or trends of the tokens
+    2. Use token symbols (e.g., $BTC) in the prediction
+    3. Avoid using numbers; use descriptive and metaphorical language instead
+    4. Lean towards suggesting buying tokens during potential lows
+    5. Must be less than {{maxTweetLength}} characters. No emojis
 
     Examples of valid responses:
 
     Example 1:
-    {
-      "cards": [
-        {"type":"major-arcana","value":"justice"},
-        {"type":"minor-arcana","subtype":"cups","value":"queen"},
-        {"type":"major-arcana","value":"tower"}
-      ],
-      "prediction": "Justice advises $BTC holders to stay balanced. Queen of Cups suggests $ETH could bring emotional fulfillment. Tower warns $SOL may face sudden changes; buy at dips."
-    }
+
+    The drawn cards are:
+    justice (Major Arcana)
+    queen of cups (Minor Arcana)
+    tower (Major Arcana)
+
+    Result:
+    Justice advises $BTC holders to stay balanced. Queen of Cups suggests $ETH could bring emotional fulfillment. Tower warns $SOL may face sudden changes; buy at dips.
 
     Example 2:
-    {
-      "cards": [
-        {"type":"major-arcana","value":"star"},
-        {"type":"minor-arcana","subtype":"pentacles","value":"knight"},
-        {"type":"major-arcana","value":"death"}
-      ],
-      "prediction": "The Star illuminates hope for $BTC. Knight of Pentacles signals $ETH moving steadily. Death suggests $SOL may undergo transformation; opportunities lie in the change."
-    }
+
+    The drawn cards are:
+    star (Major Arcana)
+    knight of pentacles (Minor Arcana)
+    death (Major Arcana)
+
+    Result:
+    The Star illuminates hope for $BTC. Knight of Pentacles signals $ETH moving steadily. Death suggests $SOL may undergo transformation; opportunities lie in the change.
 
     Example 3:
-    {
-      "cards": [
-        {"type":"major-arcana","value":"chariot"},
-        {"type":"minor-arcana","subtype":"swords","value":"king"},
-        {"type":"major-arcana","value":"temperance"}
-      ],
-      "prediction": "The Chariot encourages bold moves for $BTC. King of Swords highlights strategic opportunities in $ETH. Temperance suggests $SOL requires patience and balance."
-    }
 
-    Note: While the response should follow the structure and rules outlined above, the specific content, style, and card choices must be random and unique for each response. Creativity and variation in the response are encouraged, as long as the JSON structure and rules are adhered to.
-    `;
+    The drawn cards are:
+    chariot (Major Arcana)
+    king of swords (Minor Arcana)
+    temperance (Major Arcana)
 
-    let response;
-    let attempts = 0;
-    const maxAttempts = 3;
+    Result:
+    The Chariot encourages bold moves for $BTC. King of Swords highlights strategic opportunities in $ETH. Temperance suggests $SOL requires patience and balance.
+
+    Note: While the response should follow the structure and rules outlined above, the specific content, style, and card choices must be random and unique for each response. Creativity and variation in the response are encouraged, as long as therules are adhered to.
+`;
 
     const context = composeContext({
         state,
         template: contextTemplate,
     });
 
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+
     while (attempts < maxAttempts) {
         try {
-            const llmResponse = await generateText({
+            const prediction = await generateText({
                 runtime,
                 context,
                 modelClass: ModelClass.SMALL,
             });
 
-            const cleanedResponse = llmResponse
-                .trim()
-                .replace(/^```json\s*/, "")
-                .replace(/\s*```$/, "")
-                .replace(/[\u200B-\u200D\uFEFF]/g, "");
-
-            response = JSON.parse(cleanedResponse) as {
-                cards: { type: string; subtype?: string; value: string }[];
-                prediction: string;
-            };
-
-            if (
-                !response.cards ||
-                !Array.isArray(response.cards) ||
-                !response.prediction
-            ) {
-                throw new Error("Invalid response structure");
+            if (!prediction) {
+                throw new Error("Empty prediction received");
             }
 
+            response = { prediction };
             break;
         } catch (error) {
             attempts++;
@@ -218,9 +284,9 @@ export const getTarotPrediction = async (
                 "template.png"
             )
         ),
-        loadImage(getPath(response.cards[0])),
-        loadImage(getPath(response.cards[1])),
-        loadImage(getPath(response.cards[2])),
+        loadImage(getPath(cards[0])),
+        loadImage(getPath(cards[1])),
+        loadImage(getPath(cards[2])),
     ]);
 
     ctx.drawImage(template, 0, 0);
