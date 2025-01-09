@@ -63,7 +63,12 @@ const coingeckoProvider: Provider = {
             bitcoinAndEthereumResponse.json(),
         ])) as [Token[], Token[]];
 
-        if (!topSolanaTokens || !bitcoinAndEthereum) {
+        if (
+            !topSolanaTokens ||
+            !bitcoinAndEthereum ||
+            !Array.isArray(topSolanaTokens) ||
+            !Array.isArray(bitcoinAndEthereum)
+        ) {
             return "";
         }
 

@@ -120,6 +120,10 @@ const dexscreenerProvider: Provider = {
             pairs: Token[];
         };
 
+        if (!solanaTokens || !Array.isArray(solanaTokens.pairs)) {
+            return "";
+        }
+
         const filteredSolanaTokens = solanaTokens.pairs.filter((token) => {
             const isValidMarketCap =
                 token.marketCap > Number(process.env.MIN_MARKET_CAP);
@@ -150,10 +154,10 @@ const dexscreenerProvider: Provider = {
             .map(
                 (token) =>
                     `${token.baseToken.name} ($${token.baseToken.symbol})
-                    Price: $${Number(token.priceUsd).toLocaleString()}
-                    Volume (24h): $${Number(token.volume.h24).toLocaleString()}
-                    Market Cap: $${Number(token.marketCap).toLocaleString()}
-                    Price Change (24h): %${token.priceChange.h24.toLocaleString()}`
+                Price: $${Number(token.priceUsd).toLocaleString()}
+                Volume (24h): $${Number(token.volume.h24).toLocaleString()}
+                Market Cap: $${Number(token.marketCap).toLocaleString()}
+                Price Change (24h): %${token.priceChange.h24.toLocaleString()}`
             )
             .join("\n\n")}
         `;

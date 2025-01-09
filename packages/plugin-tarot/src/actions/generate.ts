@@ -21,19 +21,62 @@ const cardsY = 442;
 const cardsX = 635;
 const cardsHeight = 836;
 
-export const getTarotPrediction = async (runtime: IAgentRuntime) => {
-    const marketData = await Promise.all([
-        runtime.cacheManager.get("new-solana-tokens"),
-        runtime.cacheManager.get("top-tokens"),
-    ]);
+/**
+ * Truncate text to fit within the Twitter character limit, ensuring it ends at a complete sentence.
+ */
+function truncateToCompleteSentence(
+    text: string,
+    maxTweetLength: number
+): string {
+    if (text.length <= maxTweetLength) {
+        return text;
+    }
 
-    const suitabletokens = marketData.join("\n");
+    // Attempt to truncate at the last period within the limit
+    const lastPeriodIndex = text.lastIndexOf(".", maxTweetLength - 1);
+    if (lastPeriodIndex !== -1) {
+        const truncatedAtPeriod = text.slice(0, lastPeriodIndex + 1).trim();
+        if (truncatedAtPeriod.length > 0) {
+            return truncatedAtPeriod;
+        }
+    }
 
-    const prompt = `
-    Explore the energy of the following tokens:
-    ${suitabletokens}
+    // If no period, truncate to the nearest whitespace within the limit
+    const lastSpaceIndex = text.lastIndexOf(" ", maxTweetLength - 1);
+    if (lastSpaceIndex !== -1) {
+        const truncatedAtSpace = text.slice(0, lastSpaceIndex).trim();
+        if (truncatedAtSpace.length > 0) {
+            return truncatedAtSpace + "...";
+        }
+    }
 
-    Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
+    // Fallback: Hard truncate and add ellipsis
+    const hardTruncated = text.slice(0, maxTweetLength - 3).trim();
+    return hardTruncated + "...";
+}
+
+export const getTarotPrediction = async (
+    runtime: IAgentRuntime,
+    state: State
+) => {
+    const maxTweetLength = (state.maxTweetLength as number) || 180;
+
+    const context = `
+    # Areas of Expertise
+    ${state.knowledge}
+
+    # About ${state.agentName} (@${state.twitterUserName}):
+    ${state.bio}
+    ${state.lore}
+    ${state.topics}
+
+    ${state.providers}
+
+    ${state.characterPostExamples}
+
+    ${state.postDirections}
+
+    Task: Explore the energy of the top solana tokens, new solana tokens, Bitcoin and Ethereum. Generate a post in the voice and style and perspective of ${state.agentName} @${state.twitterUserName}. Draw three tarot cards and generate a 3-day prediction based on the cards' meanings and token energies. Ensure the cards are diverse, reflecting different aspects of the market and token behavior, with no repeated cards. The cards must be chosen randomly for each response to maintain unpredictability and uniqueness.
 
     IMPORTANT: The response must be a valid JSON, strictly following the format below. No additional text, comments, or formatting is allowed. The response should align with the structure and rules provided but does not need to mimic the style or content of the examples.
 
@@ -46,7 +89,7 @@ export const getTarotPrediction = async (runtime: IAgentRuntime) => {
           "value": string (see allowed values below)
         }
       ],
-      "prediction": string (max 280 characters, summarizing insights tied to the cards and tokens, using token symbols, avoiding numbers, and leaning towards buying during lows)
+      "prediction": string (max ${maxTweetLength} characters, summarizing insights tied to the cards and tokens, using token symbols, avoiding numbers, and leaning towards buying during lows)
     }
 
     Allowed card values:
@@ -60,7 +103,7 @@ export const getTarotPrediction = async (runtime: IAgentRuntime) => {
     4. Use token symbols (e.g., $BTC) in the prediction.
     5. Avoid using numbers in the prediction; use descriptive and metaphorical language instead.
     6. Lean towards suggesting buying tokens during potential lows as part of the interpretation.
-    7. The prediction must not exceed 180 characters and should be written as a single line.
+    7. The prediction must MUST be less than ${state.maxTweetLength}. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.
     8. Response must be in pure JSON format.
 
     Examples of valid responses:
@@ -102,11 +145,13 @@ export const getTarotPrediction = async (runtime: IAgentRuntime) => {
     let attempts = 0;
     const maxAttempts = 3;
 
+    console.log("context", context);
+
     while (attempts < maxAttempts) {
         try {
             const llmResponse = await generateText({
                 runtime,
-                context: prompt,
+                context,
                 modelClass: ModelClass.SMALL,
             });
 
@@ -197,7 +242,7 @@ export const getTarotPrediction = async (runtime: IAgentRuntime) => {
     const buffer = canvas.toBuffer("image/png");
 
     return {
-        buffer,
+        media: buffer,
         prediction: response.prediction,
     };
 };
@@ -206,7 +251,7 @@ const generate: Action = {
     name: "GENERATE_TAROT",
     similes: ["TAROT_GENERATE", "TAROT_GEN", "TAROT_CREATE", "TAROT_MAKE"],
     examples: [],
-    description: "Generate a tarot card based on a text prompt",
+    description: "Generate a tarot prediction based on the current market",
     validate: async (_runtime: IAgentRuntime, _message: Memory) => {
         return true;
     },
@@ -217,7 +262,28 @@ const generate: Action = {
         _options: unknown,
         _callback: HandlerCallback
     ) => {
-        const { buffer, prediction } = await getTarotPrediction(_runtime);
+        const { media, prediction } = await getTarotPrediction(
+            _runtime,
+            _state
+        );
+
+        let cleanedContent = prediction as string;
+
+        const maxTweetLength = (_state.maxTweetLength as number) || 180;
+
+        if (maxTweetLength) {
+            cleanedContent = truncateToCompleteSentence(
+                cleanedContent,
+                maxTweetLength
+            );
+        }
+
+        const removeQuotes = (str: string) =>
+            str.replace(/^['"](.*)['"]$/, "$1");
+
+        const fixNewLines = (str: string) => str.replaceAll(/\\n/g, "\n\n");
+
+        cleanedContent = removeQuotes(fixNewLines(cleanedContent));
 
         const filename = `result_${Date.now()}.png`;
 
@@ -229,11 +295,11 @@ const generate: Action = {
 
         const filepath = path.join(imageDir, filename);
 
-        fs.writeFileSync(filepath, buffer);
+        fs.writeFileSync(filepath, media);
 
         await _callback(
             {
-                text: prediction,
+                text: cleanedContent,
                 attachments: [
                     {
                         id: crypto.randomUUID(),

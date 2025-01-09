@@ -382,33 +382,32 @@ export class TwitterPostClient {
     async postTweet(
         runtime: IAgentRuntime,
         client: ClientBase,
-        cleanedContent: string,
+        content: {
+            prediction: string;
+            media?: Buffer;
+        },
         roomId: UUID,
-        newTweetContent: string,
         twitterUsername: string
     ) {
         try {
             elizaLogger.log(`Posting new tweet:\n`);
 
-            const { buffer, prediction: cleanedContent } =
-                await getTarotPrediction(runtime);
-
             let result;
 
-            if (cleanedContent.length > DEFAULT_MAX_TWEET_LENGTH) {
+            if (content.prediction.length > DEFAULT_MAX_TWEET_LENGTH) {
                 result = await this.handleNoteTweet(
                     client,
                     runtime,
-                    cleanedContent,
+                    content.prediction,
                     undefined,
-                    buffer
+                    content.media
                 );
             } else {
                 result = await this.sendStandardTweet(
                     client,
-                    cleanedContent,
+                    content.prediction,
                     undefined,
-                    buffer
+                    content.media
                 );
             }
 
@@ -423,7 +422,7 @@ export class TwitterPostClient {
                 client,
                 tweet,
                 roomId,
-                newTweetContent
+                content.prediction
             );
         } catch (error) {
             elizaLogger.error("Error sending tweet:", error);
@@ -464,53 +463,13 @@ export class TwitterPostClient {
                 }
             );
 
-            const context = composeContext({
-                state,
-                template:
-                    this.runtime.character.templates?.twitterPostTemplate ||
-                    twitterPostTemplate,
-            });
-
-            elizaLogger.debug("generate post prompt:\n" + context);
-
-            const newTweetContent = await generateText({
-                runtime: this.runtime,
-                context,
-                modelClass: ModelClass.SMALL,
-            });
+            const { media, prediction } = await getTarotPrediction(
+                this.runtime,
+                state
+            );
 
             // First attempt to clean content
-            let cleanedContent = "";
-
-            // Try parsing as JSON first
-            try {
-                const parsedResponse = JSON.parse(newTweetContent);
-                if (parsedResponse.text) {
-                    cleanedContent = parsedResponse.text;
-                } else if (typeof parsedResponse === "string") {
-                    cleanedContent = parsedResponse;
-                }
-            } catch (error) {
-                error.linted = true; // make linter happy since catch needs a variable
-                // If not JSON, clean the raw content
-                cleanedContent = newTweetContent
-                    .replace(/^\s*{?\s*"text":\s*"|"\s*}?\s*$/g, "") // Remove JSON-like wrapper
-                    .replace(/^['"](.*)['"]$/g, "$1") // Remove quotes
-                    .replace(/\\"/g, '"') // Unescape quotes
-                    .replace(/\\n/g, "\n\n") // Unescape newlines, ensures double spaces
-                    .trim();
-            }
-
-            if (!cleanedContent) {
-                elizaLogger.error(
-                    "Failed to extract valid content from response:",
-                    {
-                        rawResponse: newTweetContent,
-                        attempted: "JSON parsing",
-                    }
-                );
-                return;
-            }
+            let cleanedContent = prediction;
 
             // Truncate the content to the maximum tweet length specified in the environment settings, ensuring the truncation respects sentence boundaries.
             const maxTweetLength = this.client.twitterConfig.MAX_TWEET_LENGTH;
@@ -541,9 +500,8 @@ export class TwitterPostClient {
                 this.postTweet(
                     this.runtime,
                     this.client,
-                    cleanedContent,
+                    { prediction: cleanedContent, media },
                     roomId,
-                    newTweetContent,
                     this.twitterUsername
                 );
             } catch (error) {
