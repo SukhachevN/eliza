@@ -769,6 +769,9 @@ importers:
       '@elizaos/core':
         specifier: workspace:*
         version: link:../core
+      '@elizaos/plugin-tarot':
+        specifier: workspace:*
+        version: link:../plugin-tarot
       agent-twitter-client:
         specifier: 0.0.18
         version: 0.0.18(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1765,9 +1768,6 @@ importers:
 
   packages/plugin-tarot:
     dependencies:
-      '@elizaos/client-twitter':
-        specifier: workspace:*
-        version: link:../client-twitter
       '@elizaos/core':
         specifier: workspace:*
         version: link:../core

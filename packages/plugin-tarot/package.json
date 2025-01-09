@@ -6,7 +6,6 @@
     "types": "dist/index.d.ts",
     "dependencies": {
         "@elizaos/core": "workspace:*",
-        "@elizaos/client-twitter": "workspace:*",
         "canvas": "^3.0.1",
         "tsup": "8.3.5",
         "node-gyp": "^10.2.0",
