@@ -1,6 +1,8 @@
 import { Plugin } from "@elizaos/core";
 import { coingeckoProvider, dexscreenerProvider } from "./providers";
-import { generate } from "./actions";
+import { generate, getTarotPrediction } from "./actions";
+
+export { getTarotPrediction };
 
 export const tarotPlugin: Plugin = {
     name: "tarot",
