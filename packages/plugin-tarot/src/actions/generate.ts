@@ -149,8 +149,6 @@ export const getTarotPrediction = async (
         template: contextTemplate,
     });
 
-    console.log("context", context);
-
     while (attempts < maxAttempts) {
         try {
             const llmResponse = await generateText({
