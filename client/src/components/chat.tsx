@@ -206,7 +206,14 @@ export default function Page({ agentId }: { agentId: UUID }) {
                                                         >
                                                             <img
                                                                 src={
-                                                                    attachment.url
+                                                                    message?.user ===
+                                                                    "user"
+                                                                        ? attachment.url
+                                                                        : attachment.url.startsWith(
+                                                                                "http"
+                                                                            )
+                                                                          ? attachment.url
+                                                                          : `http://localhost:3000/media/generated/${attachment.url.split("/").pop()}`
                                                                 }
                                                                 width="100%"
                                                                 height="100%"
