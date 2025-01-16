@@ -432,30 +432,28 @@ export class TwitterPostClient {
         client: ClientBase,
         cleanedContent: string,
         roomId: UUID,
-        content: {
-            prediction: string;
-            media?: Buffer;
-        },
-        twitterUsername: string
+        newTweetContent: string,
+        twitterUsername: string,
+        media?: Buffer
     ) {
         try {
             elizaLogger.log(`Posting new tweet:\n`);
 
             let result;
 
-            if (content.prediction.length > DEFAULT_MAX_TWEET_LENGTH) {
+            if (cleanedContent.length > DEFAULT_MAX_TWEET_LENGTH) {
                 result = await this.handleNoteTweet(
                     client,
-                    content.prediction,
+                    cleanedContent,
                     undefined,
-                    content.media
+                    media
                 );
             } else {
                 result = await this.sendStandardTweet(
                     client,
-                    content.prediction,
+                    cleanedContent,
                     undefined,
-                    content.media
+                    media
                 );
             }
 
@@ -470,7 +468,7 @@ export class TwitterPostClient {
                 client,
                 tweet,
                 roomId,
-                content.prediction
+                newTweetContent
             );
         } catch (error) {
             elizaLogger.error("Error sending tweet:", error);
@@ -511,13 +509,66 @@ export class TwitterPostClient {
                 }
             );
 
-            const { media, prediction } = await getTarotPrediction(
-                this.runtime,
-                state
-            );
+            const context = composeContext({
+                state,
+                template:
+                    this.runtime.character.templates?.twitterPostTemplate ||
+                    twitterPostTemplate,
+            });
+
+            const isGenerateTarot = Math.random() < 0.5;
 
             // First attempt to clean content
-            let cleanedContent = prediction;
+            let cleanedContent = "";
+            let tweetMedia;
+            let newTweetContent;
+
+            if (isGenerateTarot) {
+                const { media, prediction } = await getTarotPrediction(
+                    this.runtime,
+                    state
+                );
+                cleanedContent = prediction;
+                tweetMedia = media;
+            } else {
+                elizaLogger.debug("generate post prompt:\n" + context);
+
+                newTweetContent = await generateText({
+                    runtime: this.runtime,
+                    context,
+                    modelClass: ModelClass.SMALL,
+                });
+
+                // Try parsing as JSON first
+                try {
+                    const parsedResponse = JSON.parse(newTweetContent);
+                    if (parsedResponse.text) {
+                        cleanedContent = parsedResponse.text;
+                    } else if (typeof parsedResponse === "string") {
+                        cleanedContent = parsedResponse;
+                    }
+                } catch (error) {
+                    error.linted = true; // make linter happy since catch needs a variable
+                    // If not JSON, clean the raw content
+                    cleanedContent = newTweetContent
+                        .replace(/^\s*{?\s*"text":\s*"|"\s*}?\s*$/g, "") // Remove JSON-like wrapper
+                        .replace(/^['"](.*)['"]$/g, "$1") // Remove quotes
+                        .replace(/\\"/g, '"') // Unescape quotes
+                        .replace(/\\n/g, "\n\n") // Unescape newlines, ensures double spaces
+                        .trim();
+                }
+
+                if (!cleanedContent) {
+                    elizaLogger.error(
+                        "Failed to extract valid content from response:",
+                        {
+                            rawResponse: newTweetContent,
+                            attempted: "JSON parsing",
+                        }
+                    );
+                    return;
+                }
+            }
 
             // Truncate the content to the maximum tweet length specified in the environment settings, ensuring the truncation respects sentence boundaries.
             const maxTweetLength = this.client.twitterConfig.MAX_TWEET_LENGTH;
@@ -544,7 +595,7 @@ export class TwitterPostClient {
             }
 
             try {
-                if (this.approvalRequired) {
+                if (this.approvalRequired && newTweetContent) {
                     // Send for approval instead of posting directly
                     elizaLogger.log(
                         `Sending Tweet For Approval:\n ${cleanedContent}`
@@ -552,7 +603,7 @@ export class TwitterPostClient {
                     await this.sendForApproval(
                         cleanedContent,
                         roomId,
-                        cleanedContent
+                        newTweetContent
                     );
                     elizaLogger.log("Tweet sent for approval");
                 } else {
@@ -562,8 +613,9 @@ export class TwitterPostClient {
                         this.client,
                         cleanedContent,
                         roomId,
-                        { prediction: cleanedContent, media },
-                        this.twitterUsername
+                        newTweetContent,
+                        this.twitterUsername,
+                        tweetMedia
                     );
                 }
             } catch (error) {
@@ -1379,9 +1431,7 @@ export class TwitterPostClient {
                     this.client,
                     pendingTweet.cleanedContent,
                     pendingTweet.roomId,
-                    {
-                        prediction: pendingTweet.newTweetContent,
-                    },
+                    pendingTweet.newTweetContent,
                     this.twitterUsername
                 );
 
