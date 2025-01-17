@@ -530,6 +530,7 @@ export class TwitterPostClient {
                 );
                 cleanedContent = prediction;
                 tweetMedia = media;
+                newTweetContent = prediction;
             } else {
                 elizaLogger.debug("generate post prompt:\n" + context);
 
@@ -595,7 +596,7 @@ export class TwitterPostClient {
             }
 
             try {
-                if (this.approvalRequired && newTweetContent) {
+                if (this.approvalRequired) {
                     // Send for approval instead of posting directly
                     elizaLogger.log(
                         `Sending Tweet For Approval:\n ${cleanedContent}`
