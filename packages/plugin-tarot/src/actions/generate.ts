@@ -64,34 +64,6 @@ const MINOR_ARCANA_VALUES = [
 ];
 const MINOR_ARCANA_SUBTYPES = ["wands", "cups", "swords", "pentacles"];
 
-function truncateToCompleteSentence(
-    text: string,
-    maxTweetLength: number
-): string {
-    if (text.length <= maxTweetLength) {
-        return text;
-    }
-
-    const lastPeriodIndex = text.lastIndexOf(".", maxTweetLength - 1);
-    if (lastPeriodIndex !== -1) {
-        const truncatedAtPeriod = text.slice(0, lastPeriodIndex + 1).trim();
-        if (truncatedAtPeriod.length > 0) {
-            return truncatedAtPeriod;
-        }
-    }
-
-    const lastSpaceIndex = text.lastIndexOf(" ", maxTweetLength - 1);
-    if (lastSpaceIndex !== -1) {
-        const truncatedAtSpace = text.slice(0, lastSpaceIndex).trim();
-        if (truncatedAtSpace.length > 0) {
-            return truncatedAtSpace + "...";
-        }
-    }
-
-    const hardTruncated = text.slice(0, maxTweetLength - 3).trim();
-    return hardTruncated + "...";
-}
-
 function generateRandomCards() {
     const cards = [];
     const usedCards = new Set();
@@ -166,11 +138,11 @@ export const getTarotPrediction = async (
 
         {{postDirections}}
 
-         Task:
+        Task:
         1) check the data received for Top Solana Tokens, New Solana Tokens, Bitcoin and Ethereum.
-        2) decide which particular token would be the most interesting to spread tarot for tarotmancer (the higher mcap and volume fluctuations a token has - the higher interest it would have).
-        3) spread 3 card tarot based on the provided tarot cards for the token of your choice and write a tweet taking into account the character, tone of voice, lore and post examples of tarotmancer.
-        ACT LIKE TAROTMANCER, DO NOT ACT LIKE BOT OR AGENT. DO NOT SEND MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3.
+        2) choose a random token from the data set received to spread tarot for on behalf of tarotmancer.
+        3) spread 3 card tarot based on the provided tarot cards and current lunar calendar data for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore and post examples of tarotmancer.
+        ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SEND MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
 
         The drawn cards are:
         ${cardsDescription}
@@ -180,8 +152,8 @@ export const getTarotPrediction = async (
         2. Use lowercased token’s ticker (e.g., $btc) in your tweet.
         3. Avoid using numbers; use descriptive and metaphorical language instead.
         4. Your prediction should have a straightforward advice (buy or sell the token).
-        5. Your prediction should be biased towards buying strong tokens during potential lows.
-        5. Must be less than {{maxTweetLength}} characters. No hashtags and emojis. The tweet should be lowercased.
+        5. Your prediction can lean towards buying strong tokens during potential lows, but only when the context and evidence strongly support it.
+        6. Must be less than {{maxTweetLength}} characters. No hashtags and emojis. The tweet should be lowercased.
 
         Examples of valid responses:
 
