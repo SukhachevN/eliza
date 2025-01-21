@@ -1,4 +1,5 @@
 import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
+import { countTweetMentions } from "./countTweetMentions";
 
 type TokenProfile = {
     url: string;
@@ -149,16 +150,24 @@ const dexscreenerProvider: Provider = {
                 return "";
             }
 
+            const filteredSolanaTokensWithTweetMentions =
+                await Promise.all(
+                    filteredSolanaTokens.map((token) =>
+                        countTweetMentions(token.baseToken.symbol, _runtime)
+                    )
+                );
+
             const result = `
             New tokens on Solana:\n
             ${filteredSolanaTokens
                 .map(
-                    (token) =>
+                    (token, index) =>
                         `${token.baseToken.name} ($${token.baseToken.symbol})
                     Price: $${Number(token.priceUsd).toLocaleString()}
                     Volume (24h): $${Number(token.volume.h24).toLocaleString()}
                     Market Cap: $${Number(token.marketCap).toLocaleString()}
-                    Price Change (24h): %${token.priceChange.h24.toLocaleString()}`
+                    Price Change (24h): %${token.priceChange.h24.toLocaleString()}
+                    Tweet Mentions: ${filteredSolanaTokensWithTweetMentions[index]}`
                 )
                 .join("\n\n")}
             `;

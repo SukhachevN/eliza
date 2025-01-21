@@ -1,4 +1,5 @@
 import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
+import { countTweetMentions } from "./countTweetMentions";
 
 type Token = {
     ath: number;
@@ -29,7 +30,7 @@ type Token = {
     total_volume: number;
 };
 
-const formatToken = (token: Token): string => {
+const formatToken = (token: Token & { tweet_mentions: number }): string => {
     return [
         `${token.name} ($${token.symbol.toUpperCase()})`,
         `Price: $${token.current_price.toLocaleString()}`,
@@ -37,6 +38,7 @@ const formatToken = (token: Token): string => {
         `Volume: $${token.total_volume.toLocaleString()}`,
         `24h Change: ${token.price_change_percentage_24h.toFixed(2)}% ($${token.price_change_24h.toLocaleString()})`,
         `Rank: #${token.market_cap_rank}`,
+        `Tweet Mentions: ${token.tweet_mentions}`,
     ].join(" | ");
 };
 
@@ -72,12 +74,32 @@ const coingeckoProvider: Provider = {
             return "";
         }
 
+        const topSolanaTokensWithMentions = await Promise.all(
+            topSolanaTokens.map(async (token) => ({
+                ...token,
+                tweet_mentions: await countTweetMentions(
+                    token.symbol,
+                    _runtime
+                ),
+            }))
+        );
+
+        const bitcoinAndEthereumWithMentions = await Promise.all(
+            bitcoinAndEthereum.map(async (token) => ({
+                ...token,
+                tweet_mentions: await countTweetMentions(
+                    token.symbol,
+                    _runtime
+                ),
+            }))
+        );
+
         const result = [
             "Top Solana Tokens:",
-            ...topSolanaTokens.map(formatToken),
+            ...topSolanaTokensWithMentions.map(formatToken),
             "",
             "Bitcoin and Ethereum:",
-            ...bitcoinAndEthereum.map(formatToken),
+            ...bitcoinAndEthereumWithMentions.map(formatToken),
         ].join("\n");
 
         await _runtime.cacheManager.set("top-tokens", result, {
