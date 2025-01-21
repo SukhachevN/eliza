@@ -140,7 +140,7 @@ export const getTarotPrediction = async (
 
         Task:
         1) check the data received for Top Solana Tokens, New Solana Tokens, Bitcoin and Ethereum.
-        2) choose a random token from the data set received to spread tarot for on behalf of tarotmancer.
+        2) choose a random token from the data set received to spread tarot for on behalf of tarotmancer (prefer tokens with high Twitter mentions).
         3) spread 3 card tarot based on the provided tarot cards and current lunar calendar data for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore and post examples of tarotmancer.
         ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SEND MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
 
