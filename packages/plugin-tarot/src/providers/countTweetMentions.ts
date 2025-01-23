@@ -61,6 +61,13 @@ export const countTweetMentions = async (
 
             totalTweets += data.tweets.length;
             nextCursor = data.next_cursor;
+
+            if (
+                process.env.MAX_TWEETS_COUNT &&
+                totalTweets >= Number(process.env.MAX_TWEETS_COUNT)
+            ) {
+                break;
+            }
         } while (nextCursor);
 
         await runtime.cacheManager.set(
@@ -69,9 +76,7 @@ export const countTweetMentions = async (
             {
                 expires:
                     new Date().getTime() +
-                    Number(process.env.TWEET_MENTIONS_REFETCH_INTERVAL) *
-                        60 *
-                        1000,
+                    Number(process.env.REFETCH_INTERVAL) * 60 * 1000,
             }
         );
 

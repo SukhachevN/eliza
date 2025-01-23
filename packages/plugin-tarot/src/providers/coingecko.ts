@@ -1,7 +1,4 @@
-import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
-import { countTweetMentions } from "./countTweetMentions";
-
-type Token = {
+export type CoingeckoToken = {
     ath: number;
     ath_change_percentage: number;
     ath_date: string;
@@ -30,26 +27,27 @@ type Token = {
     total_volume: number;
 };
 
-const formatToken = (token: Token & { tweet_mentions: number }): string => {
+export const formatCoingeckoToken = (
+    token: CoingeckoToken & { tweetMentions: number }
+): string => {
+    const symbolWithPrefix = token.symbol.startsWith("$")
+        ? token.symbol
+        : `$${token.symbol}`;
+
     return [
-        `${token.name} ($${token.symbol.toUpperCase()})`,
+        `${token.name} (${symbolWithPrefix})`,
         `Price: $${token.current_price.toLocaleString()}`,
         `Market Cap: $${token.market_cap.toLocaleString()}`,
         `Volume: $${token.total_volume.toLocaleString()}`,
-        `24h Change: ${token.price_change_percentage_24h.toFixed(2)}% ($${token.price_change_24h.toLocaleString()})`,
+        `24h Price Change: ${token.price_change_percentage_24h.toFixed(2)}% ($${token.price_change_24h.toLocaleString()})`,
+        `24h Market Cap Change: ${token.market_cap_change_percentage_24h.toFixed(2)}% ($${token.market_cap_change_24h.toLocaleString()})`,
         `Rank: #${token.market_cap_rank}`,
-        `Tweet Mentions: ${token.tweet_mentions}`,
+        `Tweet Mentions: ${token.tweetMentions}`,
     ].join(" | ");
 };
 
-const coingeckoProvider: Provider = {
-    get: async (_runtime: IAgentRuntime, _message: Memory, _state?: State) => {
-        const topTokens = await _runtime.cacheManager.get("top-tokens");
-
-        if (topTokens) {
-            return topTokens;
-        }
-
+export const getTopTokens = async () => {
+    try {
         const [topSolanaTokensResponse, bitcoinAndEthereumResponse] =
             await Promise.all([
                 fetch(
@@ -63,7 +61,7 @@ const coingeckoProvider: Provider = {
         const [topSolanaTokens, bitcoinAndEthereum] = (await Promise.all([
             topSolanaTokensResponse.json(),
             bitcoinAndEthereumResponse.json(),
-        ])) as [Token[], Token[]];
+        ])) as [CoingeckoToken[], CoingeckoToken[]];
 
         if (
             !topSolanaTokens ||
@@ -71,43 +69,14 @@ const coingeckoProvider: Provider = {
             !Array.isArray(topSolanaTokens) ||
             !Array.isArray(bitcoinAndEthereum)
         ) {
-            return "";
+            return [];
         }
 
-        const topSolanaTokensWithMentions = await Promise.all(
-            topSolanaTokens.map(async (token) => ({
-                ...token,
-                tweet_mentions: await countTweetMentions(
-                    token.symbol,
-                    _runtime
-                ),
-            }))
-        );
-
-        const bitcoinAndEthereumWithMentions = await Promise.all(
-            bitcoinAndEthereum.map(async (token) => ({
-                ...token,
-                tweet_mentions: await countTweetMentions(
-                    token.symbol,
-                    _runtime
-                ),
-            }))
-        );
-
-        const result = [
-            "Top Solana Tokens:",
-            ...topSolanaTokensWithMentions.map(formatToken),
-            "",
-            "Bitcoin and Ethereum:",
-            ...bitcoinAndEthereumWithMentions.map(formatToken),
-        ].join("\n");
-
-        await _runtime.cacheManager.set("top-tokens", result, {
-            expires: Number(process.env.REFETCH_INTERVAL) * 60 * 1000,
-        });
-
-        return result;
-    },
+        return [...topSolanaTokens, ...bitcoinAndEthereum].map((token) => ({
+            ...token,
+            isNewToken: false,
+        }));
+    } catch {
+        return [];
+    }
 };
-
-export { coingeckoProvider };

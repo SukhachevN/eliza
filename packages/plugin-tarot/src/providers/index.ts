@@ -1,2 +1,1 @@
-export * from "./coingecko.ts";
-export * from "./dexscreener.ts";
+export * from "./tokensProvider.ts";

@@ -1,6 +1,3 @@
-import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
-import { countTweetMentions } from "./countTweetMentions";
-
 type TokenProfile = {
     url: string;
     chainId: string;
@@ -15,7 +12,7 @@ type TokenProfile = {
     }[];
 };
 
-type Token = {
+export type DexscreenerToken = {
     chainId: string;
     dexId: string;
     url: string;
@@ -85,48 +82,56 @@ type Token = {
     };
 };
 
-const dexscreenerProvider: Provider = {
-    get: async (_runtime: IAgentRuntime, _message: Memory, _state?: State) => {
-        try {
-            const newSolanaTokens =
-                await _runtime.cacheManager.get("new-solana-tokens");
+export const formatDexscreenerToken = (
+    token: DexscreenerToken & { tweetMentions: number }
+) => {
+    const symbol = token.baseToken.symbol;
+    const symbolWithPrefix = symbol.startsWith('$') ? symbol : `$${symbol}`;
 
-            if (newSolanaTokens) {
-                return newSolanaTokens;
+    return `${token.baseToken.name} (${symbolWithPrefix})
+    Price: $${Number(token.priceUsd).toLocaleString()}
+    Volume (24h): $${Number(token.volume.h24).toLocaleString()}
+    Market Cap: $${Number(token.marketCap).toLocaleString()}
+    Price Change (24h): %${token.priceChange.h24.toLocaleString()}
+    Tweet Mentions: ${token.tweetMentions}`;
+};
+
+export const getNewTokens = async () => {
+    try {
+        const latestTokensResponse = await fetch(
+            "https://api.dexscreener.com/token-profiles/latest/v1"
+        );
+
+        const latestTokens =
+            (await latestTokensResponse.json()) as TokenProfile[];
+
+        const solanaTokensAddresses = latestTokens.reduce((acc, token) => {
+            if (
+                token.chainId === "solana" &&
+                token.description &&
+                acc.length < 30
+            ) {
+                acc.push(token.tokenAddress);
             }
+            return acc;
+        }, [] as string[]);
 
-            const latestTokensResponse = await fetch(
-                "https://api.dexscreener.com/token-profiles/latest/v1"
-            );
-            const latestTokens =
-                (await latestTokensResponse.json()) as TokenProfile[];
+        const solanaTokensResponse = await fetch(
+            `https://api.dexscreener.com/latest/dex/tokens/${solanaTokensAddresses.join(
+                ","
+            )}`
+        );
 
-            const solanaTokensAddresses = latestTokens.reduce((acc, token) => {
-                if (
-                    token.chainId === "solana" &&
-                    token.description &&
-                    acc.length < 30
-                ) {
-                    acc.push(token.tokenAddress);
-                }
-                return acc;
-            }, [] as string[]);
+        const solanaTokens = (await solanaTokensResponse.json()) as {
+            pairs: DexscreenerToken[];
+        };
 
-            const solanaTokensResponse = await fetch(
-                `https://api.dexscreener.com/latest/dex/tokens/${solanaTokensAddresses.join(
-                    ","
-                )}`
-            );
+        if (!solanaTokens || !Array.isArray(solanaTokens.pairs)) {
+            return [];
+        }
 
-            const solanaTokens = (await solanaTokensResponse.json()) as {
-                pairs: Token[];
-            };
-
-            if (!solanaTokens || !Array.isArray(solanaTokens.pairs)) {
-                return "";
-            }
-
-            const filteredSolanaTokens = solanaTokens.pairs.filter((token) => {
+        const filteredSolanaTokens = solanaTokens.pairs.reduce(
+            (acc, token) => {
                 const isValidMarketCap =
                     token.marketCap > Number(process.env.MIN_MARKET_CAP);
                 const isValidVolume =
@@ -143,45 +148,25 @@ const dexscreenerProvider: Provider = {
                     ageInHours >= Number(process.env.MIN_AGE) &&
                     ageInHours <= Number(process.env.MAX_AGE);
 
-                return isValidMarketCap && isValidVolume && isValidAge;
-            });
+                if (isValidMarketCap && isValidVolume && isValidAge) {
+                    acc.push({
+                        ...token,
+                        isNewToken: true,
+                        market_cap_change_percentage_24h: token.priceChange.h24,
+                        symbol: token.baseToken.symbol,
+                    });
+                }
+                return acc;
+            },
+            [] as (DexscreenerToken & {
+                isNewToken: boolean;
+                market_cap_change_percentage_24h: number;
+                symbol: string;
+            })[]
+        );
 
-            if (filteredSolanaTokens.length === 0) {
-                return "";
-            }
-
-            const filteredSolanaTokensWithTweetMentions =
-                await Promise.all(
-                    filteredSolanaTokens.map((token) =>
-                        countTweetMentions(token.baseToken.symbol, _runtime)
-                    )
-                );
-
-            const result = `
-            New tokens on Solana:\n
-            ${filteredSolanaTokens
-                .map(
-                    (token, index) =>
-                        `${token.baseToken.name} ($${token.baseToken.symbol})
-                    Price: $${Number(token.priceUsd).toLocaleString()}
-                    Volume (24h): $${Number(token.volume.h24).toLocaleString()}
-                    Market Cap: $${Number(token.marketCap).toLocaleString()}
-                    Price Change (24h): %${token.priceChange.h24.toLocaleString()}
-                    Tweet Mentions: ${filteredSolanaTokensWithTweetMentions[index]}`
-                )
-                .join("\n\n")}
-            `;
-
-            await _runtime.cacheManager.set("new-solana-tokens", result, {
-                expires:
-                    new Date().getTime() +
-                    Number(process.env.REFETCH_INTERVAL) * 60 * 1000,
-            });
-
-            return result;
-        } catch {
-            return "";
-        }
-    },
+        return filteredSolanaTokens;
+    } catch {
+        return [];
+    }
 };
-export { dexscreenerProvider };
