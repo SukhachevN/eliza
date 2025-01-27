@@ -143,7 +143,7 @@ export const getTarotPrediction = async (
         2) choose a token from the received data set with the highest tweet mentions to spread tarot for on behalf of tarotmancer. If the chosen token is the same token you have tweeted about in the last 3 hours, then choose a token with the next highest tweet mentions.
         3) search for today's lunar calendar information. If you have already searched for today's info, skip this step.
         4) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer, and  current lunar calendar data (!).
-        ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SEND MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
+        ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SEND MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 4. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
 
         The drawn cards are:
         ${cardsDescription}
