@@ -86,7 +86,7 @@ export const formatDexscreenerToken = (
     token: DexscreenerToken & { tweetMentions: number }
 ) => {
     const symbol = token.baseToken.symbol;
-    const symbolWithPrefix = symbol.startsWith('$') ? symbol : `$${symbol}`;
+    const symbolWithPrefix = symbol.startsWith("$") ? symbol : `$${symbol}`;
 
     return `${token.baseToken.name} (${symbolWithPrefix})
     Price: $${Number(token.priceUsd).toLocaleString()}
@@ -99,7 +99,7 @@ export const formatDexscreenerToken = (
 export const getNewTokens = async () => {
     try {
         const latestTokensResponse = await fetch(
-            "https://api.dexscreener.com/token-profiles/latest/v1"
+            "https://api.dexscreener.com/token-boosts/top/v1"
         );
 
         const latestTokens =
@@ -141,14 +141,8 @@ export const getNewTokens = async () => {
                         token.volume.h1,
                         token.volume.m5
                     ) > Number(process.env.MIN_VOLUME);
-                const now = new Date().getTime();
-                const pairCreatedAt = new Date(token.pairCreatedAt).getTime();
-                const ageInHours = (now - pairCreatedAt) / (1000 * 60 * 60);
-                const isValidAge =
-                    ageInHours >= Number(process.env.MIN_AGE) &&
-                    ageInHours <= Number(process.env.MAX_AGE);
 
-                if (isValidMarketCap && isValidVolume && isValidAge) {
+                if (isValidMarketCap && isValidVolume) {
                     acc.push({
                         ...token,
                         isNewToken: true,
