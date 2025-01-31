@@ -7,6 +7,7 @@ import {
     ModelClass,
     State,
     composeContext,
+    elizaLogger,
 } from "@elizaos/core";
 import { createCanvas, loadImage } from "canvas";
 import path from "path";
@@ -108,11 +109,51 @@ function generateRandomCards() {
     return cards;
 }
 
+async function generateWithRetry(
+    runtime: IAgentRuntime,
+    context: string,
+    maxAttempts: number = 3
+) {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        try {
+            const prediction = await generateText({
+                runtime,
+                context,
+                modelClass: ModelClass.SMALL,
+            });
+
+            if (!prediction) {
+                throw new Error("Empty prediction received");
+            }
+
+            return prediction;
+        } catch (error) {
+            attempts++;
+            console.error(`Attempt ${attempts} failed:`, error);
+
+            if (attempts >= maxAttempts) {
+                throw new Error(
+                    "Failed to generate valid prediction after multiple attempts"
+                );
+            }
+        }
+    }
+}
+
 export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
     const cards = generateRandomCards();
+
+    const tokensChoice = await runtime.cacheManager.get("tokens-choice");
+
+    const isForAllTokens =
+        tokensChoice === "tokens-with-large-market-cap-change";
+
+    elizaLogger.info(`tokensChoice: ${tokensChoice}`);
 
     const cardsDescription = cards
         .map((card) => {
@@ -122,6 +163,10 @@ export const getTarotPrediction = async (
             return `${card.value} of ${card.subtype} (Minor Arcana)`;
         })
         .join("\n");
+
+    const choice = isForAllTokens
+        ? `decide which particular token would be the most interesting to spread tarot for tarotmancer (the higher mcap and volume fluctuations a token has - the higher interest it would have).`
+        : `choose a token from the received data set with the highest tweet mentions to spread tarot for on behalf of tarotmancer. If the chosen token is the same token you have tweeted about in the last 3 hours, then choose a token with the next highest tweet mentions.`;
 
     const contextTemplate = `
         # Areas of Expertise
@@ -140,18 +185,16 @@ export const getTarotPrediction = async (
 
         Task:
         1) check the data received from Tokens data.
-        2) choose a token from the received data set with the highest tweet mentions to spread tarot for on behalf of tarotmancer. If the chosen token is the same token you have tweeted about in the last 3 hours, then choose a token with the next highest tweet mentions.
-        3) search for today's lunar calendar information. If you have already searched for today's info, skip this step.
-        4) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer, and  current lunar calendar data (!).
-        5) check if your resulted tweet meets the following criteria: (1) it has verdict, (2) it is aligned with tarotmancer’s post examples, (3) it mentions the lunar calendar information, (4) it is easy to read and seems exciting. If the tweet doesn’t meet the criteria, generate a new one. Keep the tweet that meets the criteria as the final tweet.
-        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 5. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
+        2) ${choice}.
+        3) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer, and  current lunar calendar data (!).
+        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
 
         The drawn cards are:
         ${cardsDescription}
 
         Rules for the prediction:
         1. Link the meanings of the provided cards to the data received for the token of choice and knowledge.
-        2. Use lowercased token’s ticker (e.g., $btc) in your tweet.
+        2. Use lowercased token's ticker (e.g., $btc) in your tweet.
         3. Avoid using numbers; use descriptive and metaphorical language instead.
         4. Your prediction should have a straightforward advice (buy or sell the token).
         5. Your prediction can lean towards buying strong tokens during potential lows, but only when the context and evidence strongly support it.
@@ -166,7 +209,7 @@ export const getTarotPrediction = async (
         Nine of pentacles (Minor Arcana)
 
         Result:
-        $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.\ntldr: it’s ape szn, dont let destiny pass you by.
+        $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.\ntldr: it's ape szn, dont let destiny pass you by.
 
         Example 2:
         The drawn cards are:
@@ -175,7 +218,7 @@ export const getTarotPrediction = async (
         knight of swords (minor Arcana)
 
         Result:
-        $btc is holding its crown, and the cards say the king isn’t ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
+        $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
 
         Example 3:
         The drawn cards are:
@@ -184,9 +227,9 @@ export const getTarotPrediction = async (
         the fool (Major Arcana)
 
         Result:
-        $aixbt is the dark horse the cards can’t stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: buy or sit in the shadows while others take the win.
+        $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: buy or sit in the shadows while others take the win.
 
-        Note: While the response should follow the structure and rules outlined above, the specific content should be unique and aligned with tarotmancer’s character, lore, style and message examples for each response. Creativity and variation in the response are encouraged, as long as the rules are adhered to.
+        Note: While the response should follow the structure and rules outlined above, the specific content should be unique and aligned with tarotmancer's character, lore, style and message examples for each response. Creativity and variation in the response are encouraged, as long as the rules are adhered to.
     `;
 
     const context = composeContext({
@@ -195,33 +238,47 @@ export const getTarotPrediction = async (
     });
 
     let response;
-    let attempts = 0;
-    const maxAttempts = 3;
+    const prediction = await generateWithRetry(runtime, context);
 
-    while (attempts < maxAttempts) {
-        try {
-            const prediction = await generateText({
-                runtime,
-                context,
-                modelClass: ModelClass.SMALL,
-            });
+    const isNoVerdict = !prediction.includes("verdict");
 
-            if (!prediction) {
-                throw new Error("Empty prediction received");
-            }
+    if (isNoVerdict) {
+        const checkVerdictContextTemplate = `
+            # Areas of Expertise
+            {{knowledge}}
 
-            response = { prediction };
-            break;
-        } catch (error) {
-            attempts++;
-            console.error(`Attempt ${attempts} failed:`, error);
+            # About {{agentName}} (@{{twitterUserName}}):
+            {{bio}}
+            {{lore}}
+            {{topics}}
 
-            if (attempts >= maxAttempts) {
-                throw new Error(
-                    "Failed to generate valid tarot reading after multiple attempts"
-                );
-            }
-        }
+            {{providers}}
+
+            {{characterPostExamples}}
+
+            {{postDirections}}
+
+            Current tweet:
+            ${prediction}
+
+            Task:
+            Check if the tweet is correct and contains a verdict. If it does, then return the tweet without changes. If it doesn't, then return the tweet with the verdict.
+
+            Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
+        `;
+
+        const checkVerdictContext = composeContext({
+            state,
+            template: checkVerdictContextTemplate,
+        });
+
+        const checkVerdict = await generateWithRetry(
+            runtime,
+            checkVerdictContext
+        );
+        response = { prediction: checkVerdict };
+    } else {
+        response = { prediction };
     }
 
     const canvas = createCanvas(3058, 1720);

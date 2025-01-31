@@ -14,7 +14,18 @@ import { countTweetMentions } from "./countTweetMentions";
 
 export const tokensProvider: Provider = {
     get: async (_runtime: IAgentRuntime, _message: Memory, _state?: State) => {
-        const tokens = await _runtime.cacheManager.get("tokens");
+        const isNewTokens =
+            Math.random() <= Number(process.env.NEW_TOKENS_CHANCE);
+
+        const cacheKey = isNewTokens
+            ? "tokens-with-large-market-cap-change"
+            : "all-tokens";
+
+        await _runtime.cacheManager.set("tokens-choice", cacheKey, {
+            expires: new Date().getTime() + 1000 * 60 * 60 * 24,
+        });
+
+        const tokens = await _runtime.cacheManager.get(cacheKey);
 
         if (tokens) return tokens;
 
@@ -23,31 +34,38 @@ export const tokensProvider: Provider = {
             getTopTokens(),
         ]);
 
-        const sortedTokens = [...newTokens, ...topTokens].sort(
-            (a, b) =>
-                Math.abs(b.market_cap_change_percentage_24h) -
-                Math.abs(a.market_cap_change_percentage_24h)
-        );
+        let tokensForSave = [...newTokens, ...topTokens];
 
-        const selectedTokens = sortedTokens.slice(
-            0,
-            +process.env.TOKENS_FOR_TWEET_COUNT
-        );
+        if (isNewTokens) {
+            const sortedTokens = [...newTokens, ...topTokens].sort(
+                (a, b) =>
+                    Math.abs(b.market_cap_change_percentage_24h) -
+                    Math.abs(a.market_cap_change_percentage_24h)
+            );
 
-        const tokensWithMentions = await Promise.all(
-            selectedTokens.map(async (token) => {
-                const query = token.symbol.startsWith("$")
-                    ? token.symbol
-                    : `$${token.symbol}`;
+            const selectedTokens = sortedTokens.slice(
+                0,
+                +process.env.TOKENS_FOR_TWEET_COUNT
+            );
 
-                const tweetMentions = await countTweetMentions(query, _runtime);
-                return { ...token, tweetMentions };
-            })
-        );
+            tokensForSave = await Promise.all(
+                selectedTokens.map(async (token) => {
+                    const query = token.symbol.startsWith("$")
+                        ? token.symbol
+                        : `$${token.symbol}`;
+
+                    const tweetMentions = await countTweetMentions(
+                        query,
+                        _runtime
+                    );
+                    return { ...token, tweetMentions };
+                })
+            );
+        }
 
         const result = `
         Tokens data:\n
-        ${tokensWithMentions
+        ${tokensForSave
             .map((token) =>
                 token.isNewToken
                     ? formatDexscreenerToken(
@@ -63,7 +81,7 @@ export const tokensProvider: Provider = {
             )
             .join("\n\n")}`;
 
-        await _runtime.cacheManager.set("tokens", result, {
+        await _runtime.cacheManager.set(cacheKey, result, {
             expires:
                 new Date().getTime() +
                 Number(process.env.REFETCH_INTERVAL) * 60 * 1000,

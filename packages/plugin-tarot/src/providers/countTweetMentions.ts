@@ -11,7 +11,7 @@ export const countTweetMentions = async (
     query: string,
     runtime: IAgentRuntime
 ) => {
-    const cache = await runtime.cacheManager.get(`1-tweet-mentions-${query}`);
+    const cache = await runtime.cacheManager.get(`tweet-mentions-${query}`);
 
     if (cache) return cache;
 
