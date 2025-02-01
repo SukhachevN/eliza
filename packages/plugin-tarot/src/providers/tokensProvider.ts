@@ -1,4 +1,10 @@
-import { IAgentRuntime, Memory, Provider, State } from "@elizaos/core";
+import {
+    elizaLogger,
+    IAgentRuntime,
+    Memory,
+    Provider,
+    State,
+} from "@elizaos/core";
 
 import {
     DexscreenerToken,
@@ -21,13 +27,20 @@ export const tokensProvider: Provider = {
             ? "tokens-with-large-market-cap-change"
             : "all-tokens";
 
+        elizaLogger.info(`Choosing tokens for context: ${cacheKey}`);
+
         await _runtime.cacheManager.set("tokens-choice", cacheKey, {
             expires: new Date().getTime() + 1000 * 60 * 60 * 24,
         });
 
         const tokens = await _runtime.cacheManager.get(cacheKey);
 
-        if (tokens) return tokens;
+        if (tokens) {
+            elizaLogger.info(`Tokens already cached: ${cacheKey}`);
+            return tokens;
+        }
+
+        elizaLogger.info(`Getting tokens from dexscreener and coingecko`);
 
         const [newTokens, topTokens] = await Promise.all([
             getNewTokens(),
@@ -80,6 +93,8 @@ export const tokensProvider: Provider = {
                       )
             )
             .join("\n\n")}`;
+
+        elizaLogger.info(`Tokens data for context: ${result}`);
 
         await _runtime.cacheManager.set(cacheKey, result, {
             expires:

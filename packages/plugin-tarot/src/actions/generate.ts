@@ -112,7 +112,8 @@ function generateRandomCards() {
 async function generateWithRetry(
     runtime: IAgentRuntime,
     context: string,
-    maxAttempts: number = 3
+    maxAttempts: number = 3,
+    exactWordsToCheck: string[] = []
 ) {
     let attempts = 0;
 
@@ -124,16 +125,30 @@ async function generateWithRetry(
                 modelClass: ModelClass.SMALL,
             });
 
+            const isExactWordsPresent =
+                !exactWordsToCheck.length ||
+                exactWordsToCheck.every((word) => prediction.includes(word));
+
+            if (!isExactWordsPresent) {
+                elizaLogger.error(
+                    `Exact words not found in the prediction: ${exactWordsToCheck.join(", ")}\n\nPrediction: ${prediction}`
+                );
+                throw new Error("Exact words not found in the prediction");
+            }
+
             if (!prediction) {
+                elizaLogger.error("Empty prediction received");
                 throw new Error("Empty prediction received");
             }
 
             return prediction;
         } catch (error) {
             attempts++;
-            console.error(`Attempt ${attempts} failed:`, error);
 
             if (attempts >= maxAttempts) {
+                elizaLogger.error(
+                    `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${(error as Error).message}: ${context}`
+                );
                 throw new Error(
                     "Failed to generate valid prediction after multiple attempts"
                 );
@@ -146,6 +161,8 @@ export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
+    elizaLogger.info(`GENERATE_TAROT action called`);
+
     const cards = generateRandomCards();
 
     const tokensChoice = await runtime.cacheManager.get("tokens-choice");
@@ -243,6 +260,10 @@ export const getTarotPrediction = async (
     const isNoVerdict = !prediction.includes("verdict");
 
     if (isNoVerdict) {
+        elizaLogger.info(
+            `No verdict found in the prediction. Trying to add verdict to the prediction`
+        );
+
         const checkVerdictContextTemplate = `
             # Areas of Expertise
             {{knowledge}}
@@ -262,7 +283,7 @@ export const getTarotPrediction = async (
             ${prediction}
 
             Task:
-            Check if the tweet is correct and contains a verdict. If it does, then return the tweet without changes. If it doesn't, then return the tweet with the verdict.
+            Check if the final tweet from your previous task meets the criteria (has 3 cards and their meanings, has a verdict (straightforward call to action - buy or sell - and why), and 280 characters max). If it meets, then send the final tweet without changes. If it doesn't, make it meet the criteria and send it as the final tweet.
 
             Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
         `;
@@ -274,7 +295,9 @@ export const getTarotPrediction = async (
 
         const checkVerdict = await generateWithRetry(
             runtime,
-            checkVerdictContext
+            checkVerdictContext,
+            3,
+            ["verdict"]
         );
         response = { prediction: checkVerdict };
     } else {
@@ -363,15 +386,6 @@ const generate: Action = {
 
         let cleanedContent = prediction as string;
 
-        // const maxTweetLength = (_state.maxTweetLength as number) || 280;
-
-        // if (maxTweetLength) {
-        //     cleanedContent = truncateToCompleteSentence(
-        //         cleanedContent,
-        //         maxTweetLength
-        //     );
-        // }
-
         const removeQuotes = (str: string) =>
             str.replace(/^['"](.*)['"]$/, "$1");
 
@@ -400,8 +414,8 @@ const generate: Action = {
                         url: filepath,
                         title: "Generated image",
                         source: "imageGeneration",
-                        description: "...",
-                        text: "...",
+                        description: "",
+                        text: "",
                         contentType: "image/png",
                     },
                 ],

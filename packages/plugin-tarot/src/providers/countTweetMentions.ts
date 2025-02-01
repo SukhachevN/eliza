@@ -1,4 +1,4 @@
-import { IAgentRuntime } from "@elizaos/core";
+import { elizaLogger, IAgentRuntime } from "@elizaos/core";
 
 type TweetScoutResponse = {
     tweets: {
@@ -44,7 +44,7 @@ export const countTweetMentions = async (
                 | { message: string };
 
             if (!("tweets" in data)) {
-                console.log(data);
+                elizaLogger.error(`Error fetching tweets: ${data}`);
                 break;
             }
 
