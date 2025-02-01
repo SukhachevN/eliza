@@ -27,6 +27,7 @@ import {
 } from "discord.js";
 import { State } from "@elizaos/core";
 import { ActionResponse } from "@elizaos/core";
+import { getTarotPrediction } from "@elizaos/plugin-tarot";
 
 const MAX_TIMELINES_TO_FETCH = 15;
 
@@ -367,7 +368,8 @@ export class TwitterPostClient {
     async handleNoteTweet(
         client: ClientBase,
         content: string,
-        tweetId?: string
+        tweetId?: string,
+        media?: Buffer
     ) {
         try {
             const noteTweetResult = await client.requestQueue.add(
@@ -384,7 +386,8 @@ export class TwitterPostClient {
                 return await this.sendStandardTweet(
                     client,
                     truncateContent,
-                    tweetId
+                    tweetId,
+                    media
                 );
             } else {
                 return noteTweetResult.data.notetweet_create.tweet_results
@@ -398,12 +401,19 @@ export class TwitterPostClient {
     async sendStandardTweet(
         client: ClientBase,
         content: string,
-        tweetId?: string
+        tweetId?: string,
+        media?: Buffer
     ) {
         try {
             const standardTweetResult = await client.requestQueue.add(
                 async () =>
-                    await client.twitterClient.sendTweet(content, tweetId)
+                    await client.twitterClient.sendTweet(
+                        content,
+                        tweetId,
+                        media
+                            ? [{ data: media, mediaType: "image/png" }]
+                            : undefined
+                    )
             );
             const body = await standardTweetResult.json();
             if (!body?.data?.create_tweet?.tweet_results?.result) {
@@ -423,7 +433,8 @@ export class TwitterPostClient {
         cleanedContent: string,
         roomId: UUID,
         newTweetContent: string,
-        twitterUsername: string
+        twitterUsername: string,
+        media?: Buffer
     ) {
         try {
             elizaLogger.log(`Posting new tweet:\n`);
@@ -431,9 +442,19 @@ export class TwitterPostClient {
             let result;
 
             if (cleanedContent.length > DEFAULT_MAX_TWEET_LENGTH) {
-                result = await this.handleNoteTweet(client, cleanedContent);
+                result = await this.handleNoteTweet(
+                    client,
+                    cleanedContent,
+                    undefined,
+                    media
+                );
             } else {
-                result = await this.sendStandardTweet(client, cleanedContent);
+                result = await this.sendStandardTweet(
+                    client,
+                    cleanedContent,
+                    undefined,
+                    media
+                );
             }
 
             const tweet = this.createTweetObject(
@@ -495,45 +516,59 @@ export class TwitterPostClient {
                     twitterPostTemplate,
             });
 
-            elizaLogger.debug("generate post prompt:\n" + context);
-
-            const newTweetContent = await generateText({
-                runtime: this.runtime,
-                context,
-                modelClass: ModelClass.SMALL,
-            });
+            const isGenerateTarot = Math.random() < 0.5;
 
             // First attempt to clean content
             let cleanedContent = "";
+            let tweetMedia;
+            let newTweetContent;
 
-            // Try parsing as JSON first
-            try {
-                const parsedResponse = JSON.parse(newTweetContent);
-                if (parsedResponse.text) {
-                    cleanedContent = parsedResponse.text;
-                } else if (typeof parsedResponse === "string") {
-                    cleanedContent = parsedResponse;
-                }
-            } catch (error) {
-                error.linted = true; // make linter happy since catch needs a variable
-                // If not JSON, clean the raw content
-                cleanedContent = newTweetContent
-                    .replace(/^\s*{?\s*"text":\s*"|"\s*}?\s*$/g, "") // Remove JSON-like wrapper
-                    .replace(/^['"](.*)['"]$/g, "$1") // Remove quotes
-                    .replace(/\\"/g, '"') // Unescape quotes
-                    .replace(/\\n/g, "\n\n") // Unescape newlines, ensures double spaces
-                    .trim();
-            }
-
-            if (!cleanedContent) {
-                elizaLogger.error(
-                    "Failed to extract valid content from response:",
-                    {
-                        rawResponse: newTweetContent,
-                        attempted: "JSON parsing",
-                    }
+            if (isGenerateTarot) {
+                const { media, prediction } = await getTarotPrediction(
+                    this.runtime,
+                    state
                 );
-                return;
+                cleanedContent = prediction;
+                tweetMedia = media;
+                newTweetContent = prediction;
+            } else {
+                elizaLogger.debug("generate post prompt:\n" + context);
+
+                newTweetContent = await generateText({
+                    runtime: this.runtime,
+                    context,
+                    modelClass: ModelClass.SMALL,
+                });
+
+                // Try parsing as JSON first
+                try {
+                    const parsedResponse = JSON.parse(newTweetContent);
+                    if (parsedResponse.text) {
+                        cleanedContent = parsedResponse.text;
+                    } else if (typeof parsedResponse === "string") {
+                        cleanedContent = parsedResponse;
+                    }
+                } catch (error) {
+                    error.linted = true; // make linter happy since catch needs a variable
+                    // If not JSON, clean the raw content
+                    cleanedContent = newTweetContent
+                        .replace(/^\s*{?\s*"text":\s*"|"\s*}?\s*$/g, "") // Remove JSON-like wrapper
+                        .replace(/^['"](.*)['"]$/g, "$1") // Remove quotes
+                        .replace(/\\"/g, '"') // Unescape quotes
+                        .replace(/\\n/g, "\n\n") // Unescape newlines, ensures double spaces
+                        .trim();
+                }
+
+                if (!cleanedContent) {
+                    elizaLogger.error(
+                        "Failed to extract valid content from response:",
+                        {
+                            rawResponse: newTweetContent,
+                            attempted: "JSON parsing",
+                        }
+                    );
+                    return;
+                }
             }
 
             // Truncate the content to the maximum tweet length specified in the environment settings, ensuring the truncation respects sentence boundaries.
@@ -580,7 +615,8 @@ export class TwitterPostClient {
                         cleanedContent,
                         roomId,
                         newTweetContent,
-                        this.twitterUsername
+                        this.twitterUsername,
+                        tweetMedia
                     );
                 }
             } catch (error) {
