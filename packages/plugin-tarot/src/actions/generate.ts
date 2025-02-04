@@ -131,7 +131,9 @@ async function generateWithRetry(
 
             if (!isExactWordsPresent) {
                 elizaLogger.error(
-                    `Exact words not found in the prediction: ${exactWordsToCheck.join(", ")}\n\nPrediction: ${prediction}`
+                    `Exact words not found in the prediction: ${exactWordsToCheck.join(
+                        ", "
+                    )}\n\nPrediction: ${prediction}`
                 );
                 throw new Error("Exact words not found in the prediction");
             }
@@ -147,7 +149,9 @@ async function generateWithRetry(
 
             if (attempts >= maxAttempts) {
                 elizaLogger.error(
-                    `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${(error as Error).message}: ${context}`
+                    `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${
+                        (error as Error).message
+                    }: ${context}`
                 );
                 throw new Error(
                     "Failed to generate valid prediction after multiple attempts"
@@ -203,8 +207,8 @@ export const getTarotPrediction = async (
         Task:
         1) check the data received from Tokens data.
         2) ${choice}.
-        3) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer, and  current lunar calendar data (!).
-        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
+        3) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer.
+        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3.
 
         The drawn cards are:
         ${cardsDescription}
@@ -257,14 +261,11 @@ export const getTarotPrediction = async (
     let response;
     const prediction = await generateWithRetry(runtime, context);
 
-    const isNoVerdict = !prediction.includes("verdict");
+    elizaLogger.info(
+        `No verdict found in the prediction. Trying to add verdict to the prediction`
+    );
 
-    if (isNoVerdict) {
-        elizaLogger.info(
-            `No verdict found in the prediction. Trying to add verdict to the prediction`
-        );
-
-        const checkVerdictContextTemplate = `
+    const checkVerdictContextTemplate = `
             # Areas of Expertise
             {{knowledge}}
 
@@ -283,26 +284,23 @@ export const getTarotPrediction = async (
             ${prediction}
 
             Task:
-            Check if the final tweet from your previous task meets the criteria (has 3 cards and their meanings, has a verdict (straightforward call to action - buy or sell - and why), and 280 characters max). If it meets, then send the final tweet without changes. If it doesn't, make it meet the criteria and send it as the final tweet.
+            Check if the current tweet meets the criteria (has 3 cards and their meanings, has a verdict (straightforward call to action - buy or sell - and why), and 280 characters max). Make it meet the criteria and send it as the final tweet.
 
             Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
         `;
 
-        const checkVerdictContext = composeContext({
-            state,
-            template: checkVerdictContextTemplate,
-        });
+    const checkVerdictContext = composeContext({
+        state,
+        template: checkVerdictContextTemplate,
+    });
 
-        const checkVerdict = await generateWithRetry(
-            runtime,
-            checkVerdictContext,
-            3,
-            ["verdict"]
-        );
-        response = { prediction: checkVerdict };
-    } else {
-        response = { prediction };
-    }
+    const checkVerdict = await generateWithRetry(
+        runtime,
+        checkVerdictContext,
+        3,
+        ["verdict"]
+    );
+    response = { prediction: checkVerdict };
 
     const canvas = createCanvas(3058, 1720);
     const ctx = canvas.getContext("2d");

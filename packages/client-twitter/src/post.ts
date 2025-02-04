@@ -646,7 +646,7 @@ export class TwitterPostClient {
                 elizaLogger.error("Error sending tweet:", error);
             }
         } catch (error) {
-            elizaLogger.error("Error generating new tweet:", error);
+            elizaLogger.error("Error generating new tweet:", error?.message);
         }
     }
 
