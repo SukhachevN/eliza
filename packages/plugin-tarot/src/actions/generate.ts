@@ -126,7 +126,7 @@ async function generateWithRetry(
             });
 
             const isExactWordsPresent =
-                !exactWordsToCheck.length ||
+                !exactWordsToCheck?.length ||
                 exactWordsToCheck.some((word) =>
                     prediction.toLowerCase().includes(word.toLowerCase())
                 );

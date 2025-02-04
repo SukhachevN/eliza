@@ -567,9 +567,11 @@ export class TwitterPostClient {
 
                 if (
                     parsedResponse?.attachments &&
-                    parsedResponse?.attachments.length > 0
+                    parsedResponse?.attachments?.length > 0
                 ) {
-                    mediaData = await fetchMediaData(parsedResponse.attachments);
+                    mediaData = await fetchMediaData(
+                        parsedResponse.attachments
+                    );
                 }
 
                 // Try extracting text attribute
