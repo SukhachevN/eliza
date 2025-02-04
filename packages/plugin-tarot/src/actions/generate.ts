@@ -285,7 +285,7 @@ export const getTarotPrediction = async (
             3. Total length must be under 280 characters
             4. If any requirement is not met, add or modify the tweet to comply
 
-            Return ONLY the final, compliant tweet.
+            ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF TWEET WITH VERDICT.
 
             Examples of valid responses:
 
