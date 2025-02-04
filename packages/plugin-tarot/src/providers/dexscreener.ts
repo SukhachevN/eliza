@@ -93,7 +93,11 @@ export const formatDexscreenerToken = (
     Volume (24h): $${Number(token.volume.h24).toLocaleString()}
     Market Cap: $${Number(token.marketCap).toLocaleString()}
     Price Change (24h): %${token.priceChange.h24.toLocaleString()}
-    Tweet Mentions: ${token.tweetMentions}`;
+    ${
+        typeof token.tweetMentions === "number"
+            ? `Tweet Mentions: ${token.tweetMentions}`
+            : ""
+    }`;
 };
 
 export const getNewTokens = async () => {

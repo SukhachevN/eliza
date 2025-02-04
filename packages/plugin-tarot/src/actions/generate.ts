@@ -127,7 +127,9 @@ async function generateWithRetry(
 
             const isExactWordsPresent =
                 !exactWordsToCheck.length ||
-                exactWordsToCheck.every((word) => prediction.includes(word));
+                exactWordsToCheck.some((word) =>
+                    prediction.toLowerCase().includes(word.toLowerCase())
+                );
 
             if (!isExactWordsPresent) {
                 elizaLogger.error(
@@ -151,7 +153,7 @@ async function generateWithRetry(
                 elizaLogger.error(
                     `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${
                         (error as Error).message
-                    }: ${context}`
+                    }`
                 );
                 throw new Error(
                     "Failed to generate valid prediction after multiple attempts"
@@ -286,7 +288,7 @@ export const getTarotPrediction = async (
             Task:
             Check if the current tweet meets the criteria (has 3 cards and their meanings, has a verdict (straightforward call to action - buy or sell - and why), and 280 characters max). Make it meet the criteria and send it as the final tweet.
 
-            Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT!
+            Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT! SEND NOTHING BUT THE FINAL RESULT OF TWEET WITH VERDICT.
         `;
 
     const checkVerdictContext = composeContext({
@@ -298,9 +300,9 @@ export const getTarotPrediction = async (
         runtime,
         checkVerdictContext,
         3,
-        ["verdict"]
+        ["verdict", "tldr", "buy", "sell"]
     );
-    response = { prediction: checkVerdict };
+    response = { prediction: checkVerdict?.toLowerCase() };
 
     const canvas = createCanvas(3058, 1720);
     const ctx = canvas.getContext("2d");

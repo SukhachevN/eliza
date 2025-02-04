@@ -39,10 +39,16 @@ export const formatCoingeckoToken = (
         `Price: $${token.current_price.toLocaleString()}`,
         `Market Cap: $${token.market_cap.toLocaleString()}`,
         `Volume: $${token.total_volume.toLocaleString()}`,
-        `24h Price Change: ${token.price_change_percentage_24h.toFixed(2)}% ($${token.price_change_24h.toLocaleString()})`,
-        `24h Market Cap Change: ${token.market_cap_change_percentage_24h.toFixed(2)}% ($${token.market_cap_change_24h.toLocaleString()})`,
+        `24h Price Change: ${token.price_change_percentage_24h.toFixed(
+            2
+        )}% ($${token.price_change_24h.toLocaleString()})`,
+        `24h Market Cap Change: ${token.market_cap_change_percentage_24h.toFixed(
+            2
+        )}% ($${token.market_cap_change_24h.toLocaleString()})`,
         `Rank: #${token.market_cap_rank}`,
-        `Tweet Mentions: ${token.tweetMentions}`,
+        typeof token.tweetMentions === "number"
+            ? `Tweet Mentions: ${token.tweetMentions}`
+            : "",
     ].join(" | ");
 };
 
