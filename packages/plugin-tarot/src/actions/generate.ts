@@ -155,9 +155,6 @@ async function generateWithRetry(
                         (error as Error).message
                     }`
                 );
-                throw new Error(
-                    "Failed to generate valid prediction after multiple attempts"
-                );
             }
         }
     }
