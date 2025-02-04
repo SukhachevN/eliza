@@ -1585,15 +1585,20 @@ app.get("/memories", async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    const dataDir = path.join(__dirname, "../data");
+app.listen(3001, () => {
+    try {
+        const dataDir = path.join(__dirname, "../data");
 
-    if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        dbAdapter = initializeDatabase(dataDir) as IDatabaseAdapter &
+            IDatabaseCacheAdapter;
+        dbAdapter.init();
+
+        elizaLogger.info("Memories API is running on port 3001");
+    } catch (error) {
+        elizaLogger.error("Error starting memories API:", error);
     }
-
-    dbAdapter = initializeDatabase(dataDir) as IDatabaseAdapter &
-        IDatabaseCacheAdapter;
-    dbAdapter.init();
-    console.log("Server is running on port 3000");
 });

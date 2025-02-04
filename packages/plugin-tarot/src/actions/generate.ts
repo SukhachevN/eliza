@@ -260,10 +260,6 @@ export const getTarotPrediction = async (
     let response;
     const prediction = await generateWithRetry(runtime, context);
 
-    elizaLogger.info(
-        `No verdict found in the prediction. Trying to add verdict to the prediction`
-    );
-
     const checkVerdictContextTemplate = `
             # Areas of Expertise
             {{knowledge}}
@@ -283,9 +279,36 @@ export const getTarotPrediction = async (
             ${prediction}
 
             Task:
-            Check if the current tweet meets the criteria (has 3 cards and their meanings, has a verdict (straightforward call to action - buy or sell - and why), and 280 characters max). Make it meet the criteria and send it as the final tweet.
+            Validate and fix the tweet to meet ALL of the following requirements:
+            1. Must include a clear verdict starting with "verdict:" or "tldr:"
+            2. Verdict must explicitly state "buy" or "sell" with reasoning
+            3. Total length must be under 280 characters
+            4. If any requirement is not met, add or modify the tweet to comply
 
-            Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET WITH VERDICT. THE RESULTING TWEET SHOULD ALWAYS INCLUDE A VERDICT! SEND NOTHING BUT THE FINAL RESULT OF TWEET WITH VERDICT.
+            Return ONLY the final, compliant tweet.
+
+            Examples of valid responses:
+
+            Example 1:
+            Current tweet:
+            $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.
+
+            Result:
+            $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.\ntldr: it's ape szn, dont let destiny pass you by.
+
+            Example 2:
+            Current tweet:
+            $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.
+
+            Result:
+            $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
+
+            Example 3:
+            Current tweet:
+            $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.
+
+            Result:
+            $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: buy or sit in the shadows while others take the win.
         `;
 
     const checkVerdictContext = composeContext({
