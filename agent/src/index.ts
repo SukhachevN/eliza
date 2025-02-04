@@ -157,6 +157,9 @@ import { MongoClient } from "mongodb";
 import { quickIntelPlugin } from "@elizaos/plugin-quick-intel";
 import { tarotPlugin } from "@elizaos/plugin-tarot";
 
+import express from "express";
+import cors from "cors";
+
 import { trikonPlugin } from "@elizaos/plugin-trikon";
 import arbitragePlugin from "@elizaos/plugin-arbitrage";
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
@@ -1542,3 +1545,55 @@ if (
         console.error("unhandledRejection", err);
     });
 }
+
+let dbAdapter: IDatabaseAdapter & IDatabaseCacheAdapter;
+
+const app = express();
+app.use(cors());
+
+app.get("/memories", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    "SELECT * FROM memories ORDER BY createdAt DESC LIMIT ? OFFSET ?"
+                )
+                .all(limit, offset),
+            dbAdapter.db
+                .prepare("SELECT COUNT(*) as count FROM memories")
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching memories:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.listen(3000, () => {
+    const dataDir = path.join(__dirname, "../data");
+
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    dbAdapter = initializeDatabase(dataDir) as IDatabaseAdapter &
+        IDatabaseCacheAdapter;
+    dbAdapter.init();
+    console.log("Server is running on port 3000");
+});
