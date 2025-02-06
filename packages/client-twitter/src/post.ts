@@ -595,10 +595,23 @@ export class TwitterPostClient {
 
             // Truncate the content to the maximum tweet length specified in the environment settings, ensuring the truncation respects sentence boundaries.
             if (maxTweetLength) {
-                tweetTextForPosting = truncateToCompleteSentence(
-                    tweetTextForPosting,
-                    maxTweetLength
-                );
+                try {
+                    elizaLogger.debug(
+                        "truncateToCompleteSentence:\n" +
+                            tweetTextForPosting +
+                            "\n" +
+                            maxTweetLength
+                    );
+                    tweetTextForPosting = truncateToCompleteSentence(
+                        tweetTextForPosting,
+                        maxTweetLength
+                    );
+                } catch (error) {
+                    elizaLogger.error(
+                        "Error truncating tweet text:",
+                        error?.message
+                    );
+                }
             }
 
             const removeQuotes = (str: string) =>
