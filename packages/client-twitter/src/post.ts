@@ -556,7 +556,7 @@ export class TwitterPostClient {
                 rawTweetContent = cleanJsonResponse(response);
 
                 // First attempt to clean content
-                let tweetTextForPosting = null;
+                tweetTextForPosting = null;
                 mediaData = null;
 
                 // Try parsing as JSON first
