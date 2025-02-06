@@ -221,7 +221,16 @@ export default function Page({ agentId }: { agentId: UUID }) {
                                                         >
                                                             <img
                                                                 alt="attachment"
-                                                                src={attachment.url}
+                                                                src={
+                                                                    message?.user ===
+                                                                    "user"
+                                                                        ? attachment.url
+                                                                        : attachment.url.startsWith(
+                                                                                "http"
+                                                                            )
+                                                                          ? attachment.url
+                                                                          : `http://localhost:3000/media/generated/${attachment.url.split("/").pop()}`
+                                                                }
                                                                 width="100%"
                                                                 height="100%"
                                                                 className="w-64 rounded-md"
