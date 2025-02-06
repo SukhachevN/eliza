@@ -435,7 +435,7 @@ export class TwitterPostClient {
             }
             return body.data.create_tweet.tweet_results.result;
         } catch (error) {
-            elizaLogger.error("Error sending standard Tweet:", error);
+            elizaLogger.error("Error sending standard Tweet:", error?.message);
             throw error;
         }
     }
@@ -557,7 +557,7 @@ export class TwitterPostClient {
 
                 // First attempt to clean content
                 let tweetTextForPosting = null;
-                let mediaData = null;
+                mediaData = null;
 
                 // Try parsing as JSON first
                 const parsedResponse = parseJSONObjectFromText(rawTweetContent);
