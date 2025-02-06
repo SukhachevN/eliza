@@ -385,8 +385,8 @@ export const getTarotPrediction = async (
 };
 
 const generate: Action = {
-    name: "GENERATE_TAROT",
-    similes: ["TAROT_GENERATE", "TAROT_GEN", "TAROT_CREATE", "TAROT_MAKE"],
+    name: "SPREAD_TAROT",
+    similes: [],
     examples: [],
     description: "Generate a tarot prediction based on the current market",
     validate: async (_runtime: IAgentRuntime, _message: Memory) => {
