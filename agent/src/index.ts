@@ -1560,11 +1560,19 @@ app.get("/memories", async (req, res) => {
         const [memories, totalCount] = await Promise.all([
             dbAdapter.db
                 .prepare(
-                    "SELECT * FROM memories ORDER BY createdAt DESC LIMIT ? OFFSET ?"
+                    `SELECT id, createdAt, content FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer') 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
                 )
                 .all(limit, offset),
+
             dbAdapter.db
-                .prepare("SELECT COUNT(*) as count FROM memories")
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer')`
+                )
                 .get(),
         ]);
 
