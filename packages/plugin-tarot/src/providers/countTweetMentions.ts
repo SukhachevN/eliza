@@ -1,4 +1,5 @@
-import { elizaLogger, IAgentRuntime } from "@elizaos/core";
+import { IAgentRuntime } from "@elizaos/core";
+import { insertTarotLog } from "../utils";
 
 type TweetScoutResponse = {
     tweets: {
@@ -44,7 +45,10 @@ export const countTweetMentions = async (
                 | { message: string };
 
             if (!("tweets" in data)) {
-                elizaLogger.error(`Error fetching tweets: ${data}`);
+                insertTarotLog(
+                    runtime.databaseAdapter.db,
+                    `Error fetching tweets: ${data}`
+                );
                 break;
             }
 

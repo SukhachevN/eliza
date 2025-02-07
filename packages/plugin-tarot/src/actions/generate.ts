@@ -7,12 +7,12 @@ import {
     ModelClass,
     State,
     composeContext,
-    elizaLogger,
 } from "@elizaos/core";
 import { createCanvas, loadImage } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { insertTarotLog } from "../utils";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -132,7 +132,8 @@ async function generateWithRetry(
                 );
 
             if (!isExactWordsPresent) {
-                elizaLogger.error(
+                insertTarotLog(
+                    runtime.databaseAdapter.db,
                     `Exact words not found in the prediction: ${exactWordsToCheck.join(
                         ", "
                     )}\n\nPrediction: ${prediction}`
@@ -141,7 +142,10 @@ async function generateWithRetry(
             }
 
             if (!prediction) {
-                elizaLogger.error("Empty prediction received");
+                insertTarotLog(
+                    runtime.databaseAdapter.db,
+                    "Empty prediction received"
+                );
                 throw new Error("Empty prediction received");
             }
 
@@ -150,7 +154,8 @@ async function generateWithRetry(
             attempts++;
 
             if (attempts >= maxAttempts) {
-                elizaLogger.error(
+                insertTarotLog(
+                    runtime.databaseAdapter.db,
                     `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${
                         (error as Error).message
                     }`
@@ -164,7 +169,7 @@ export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
-    elizaLogger.info(`SPREAD_TAROT action called`);
+    insertTarotLog(runtime.databaseAdapter.db, "SPREAD_TAROT action called");
 
     const cards = generateRandomCards();
 
@@ -173,7 +178,7 @@ export const getTarotPrediction = async (
     const isForAllTokens =
         tokensChoice === "tokens-with-large-market-cap-change";
 
-    elizaLogger.info(`tokensChoice: ${tokensChoice}`);
+    insertTarotLog(runtime.databaseAdapter.db, `tokensChoice: ${tokensChoice}`);
 
     const cardsDescription = cards
         .map((card) => {

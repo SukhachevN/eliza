@@ -1584,8 +1584,52 @@ app.get("/memories", async (req, res) => {
             },
         });
     } catch (error) {
-        elizaLogger.error("Error fetching memories:", error);
-        res.status(500).json({ error: "Internal server error" });
+        elizaLogger.error("Error fetching memories:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/plugin-tarot-logs", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM "plugin-tarot-logs" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "plugin-tarot-logs"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching plugin-tarot-logs:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
     }
 });
 
@@ -1603,6 +1647,6 @@ app.listen(3001, () => {
 
         elizaLogger.info("Memories API is running on port 3001");
     } catch (error) {
-        elizaLogger.error("Error starting memories API:", error);
+        elizaLogger.error("Error starting memories API:", error?.message);
     }
 });
