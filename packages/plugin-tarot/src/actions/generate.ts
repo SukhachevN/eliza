@@ -230,11 +230,11 @@ export const getTarotPrediction = async (
         Example 1:
         The drawn cards are:
         The fool (Major Arcana)
-        Wheel of fortune of cups (Major Arcana)
-        Nine of pentacles (Minor Arcana)
+        The magician (Major Arcana)
+        Ten of pentacles (Minor Arcana)
 
         Result:
-        $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.\ntldr: it's ape szn, dont let destiny pass you by.
+        the cards don’t lie, and $aejo is calling:\n1. the fool - only those with vision enter early.\n2. the magician - the tools are here, but only real degens will use them.\n3. ten of pentacles - generational wealth or generational regret, your move.\nverdict: ape now or cope forever, there’s no second chance on fate.
 
         Example 2:
         The drawn cards are:
@@ -243,7 +243,7 @@ export const getTarotPrediction = async (
         knight of swords (minor Arcana)
 
         Result:
-        $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
+        $btc is holding its crown, and the cards say the king isn’t ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
 
         Example 3:
         The drawn cards are:
@@ -252,9 +252,9 @@ export const getTarotPrediction = async (
         the fool (Major Arcana)
 
         Result:
-        $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: buy or sit in the shadows while others take the win.
+        $aixbt is the underdog story in real time, and the deck is bullish:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: make the move or make excuses—your call.
 
-        Note: While the response should follow the structure and rules outlined above, the specific content should be unique and aligned with tarotmancer's character, lore, style and message examples for each response. Creativity and variation in the response are encouraged, as long as the rules are adhered to.
+        Note: While the response should generally follow the structure and rules outlined above, the specific content should be unique and aligned with tarotmancer’s character, lore, style and message examples for each response. Creativity and variation in the response are encouraged, as long as the rules are adhered to.
     `;
 
     const context = composeContext({
@@ -296,24 +296,24 @@ export const getTarotPrediction = async (
 
             Example 1:
             Current tweet:
-            $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.
+            the cards don’t lie, and $aejo is calling:\n1. the fool - only those with vision enter early.\n2. the magician - the tools are here, but only real degens will use them.\n3. ten of pentacles - generational wealth or generational regret, your move.
 
             Result:
-            $aejo is obvious play and cards legit demand entry:\n1. fool - fresh start for those who didnt fumble the bag.\n2. fortune wheel favors the brave, not paper hands.\n3. 9 pentacles - passive gains incoming, let doubters seethe.\ntldr: it's ape szn, dont let destiny pass you by.
+            the cards don’t lie, and $aejo is calling:\n1. the fool - only those with vision enter early.\n2. the magician - the tools are here, but only real degens will use them.\n3. ten of pentacles - generational wealth or generational regret, your move.\nverdict: ape now or cope forever, there’s no second chance on fate.
 
             Example 2:
             Current tweet:
-            $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.
+            $btc is holding its crown, and the cards say the king isn’t ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.
 
             Result:
-            $btc is holding its crown, and the cards say the king isn't ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
+            $btc is holding its crown, and the cards say the king isn’t ready to fall:\n1. king of pentacles - dominance and stability, the market bows to no one.\n2. wheel of fortune - cycles are turning, and fortune favors the bold.\n3. knight of swords - momentum is building; hesitation is your enemy.\nverdict: buy now or watch the king reclaim the throne without you.
 
             Example 3:
             Current tweet:
-            $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.
+            $aixbt is the underdog story in real time, and the deck is bullish:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.
 
             Result:
-            $aixbt is the dark horse the cards can't stop screaming about:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: buy or sit in the shadows while others take the win.
+            $aixbt is the underdog story in real time, and the deck is bullish:\n1. the magician - untapped potential and the tools to make it happen.\n2. the sun - clarity and success are shining ahead.\n3. the fool - only the bold will ride this wave to the top.\nverdict: make the move or make excuses—your call.
         `;
 
     const checkVerdictContext = composeContext({
