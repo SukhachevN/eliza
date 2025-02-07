@@ -164,7 +164,7 @@ export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
-    elizaLogger.info(`GENERATE_TAROT action called`);
+    elizaLogger.info(`SPREAD_TAROT action called`);
 
     const cards = generateRandomCards();
 
