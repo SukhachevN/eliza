@@ -207,7 +207,7 @@ export const getTarotPrediction = async (
         1) check the data received from Tokens data.
         2) ${choice}.
         3) spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet taking into account the character, tone of voice, lore, post examples of tarotmancer.
-        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3.
+        Notes: ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF STEP 3. TOTAL LENGHT MUST BE UNDER 200 CHARACTERS.
 
         The drawn cards are:
         ${cardsDescription}
