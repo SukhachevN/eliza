@@ -218,7 +218,7 @@ export const getTarotPrediction = async (
         3. Avoid using numbers; use descriptive and metaphorical language instead.
         4. Your prediction should have a straightforward advice (buy or sell the token).
         5. Your prediction can lean towards buying strong tokens during potential lows, but only when the context and evidence strongly support it.
-        6. Must be less than 210 characters. No hashtags and emojis. The tweet should be lowercased.
+        6. MUST BE LESS THAN 200 CHARACTERS. No hashtags and emojis. The tweet should be lowercased.
 
         Examples of valid responses:
 
@@ -282,10 +282,10 @@ export const getTarotPrediction = async (
             Validate and fix the tweet to meet ALL of the following requirements:
             1. Must include a clear verdict starting with "verdict:" or "tldr:"
             2. Verdict must explicitly state "buy" or "sell" with reasoning
-            3. TOTAL LENGHT MUST BE UNDER 270 CHARACTERS
+            3. TOTAL LENGHT MUST BE UNDER 260 CHARACTERS
             4. If any requirement is not met, add or modify the tweet to comply
 
-            ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF TWEET WITH VERDICT.
+            ACT AND RESPONSE LIKE TAROTMANCER, DO NOT ACT AND RESPONSE LIKE BOT OR AGENT. DO NOT SHOW MIDTERM RESULTS - SEND ONLY FINAL TWEET. SEND NOTHING BUT THE FINAL RESULT OF TWEET WITH VERDICT UNDER 260 CHARACTERS.
 
             Examples of valid responses:
 
