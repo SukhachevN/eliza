@@ -530,7 +530,7 @@ export class TwitterPostClient {
                     twitterPostTemplate,
             });
 
-            const isGenerateTarot = Math.random() < 0.5;
+            const isGenerateTarot = Math.random() < 0.75;
 
             let tweetTextForPosting: string;
             let mediaData: MediaData[];
