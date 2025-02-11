@@ -503,6 +503,7 @@ export class DirectClient {
                     runtime,
                     context,
                     modelClass: ModelClass.SMALL, // 1s processing time on openai small
+                    // @ts-ignore
                     schema: hyperfiOutSchema,
                 });
 

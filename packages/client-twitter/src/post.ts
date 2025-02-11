@@ -31,6 +31,7 @@ import {
 import type { State } from "@elizaos/core";
 import type { ActionResponse } from "@elizaos/core";
 import { MediaData } from "./types.ts";
+import { getTarotPrediction } from "@elizaos/plugin-tarot";
 
 const MAX_TIMELINES_TO_FETCH = 15;
 
@@ -434,7 +435,7 @@ export class TwitterPostClient {
             }
             return body.data.create_tweet.tweet_results.result;
         } catch (error) {
-            elizaLogger.error("Error sending standard Tweet:", error);
+            elizaLogger.error("Error sending standard Tweet:", error?.message);
             throw error;
         }
     }
@@ -529,57 +530,88 @@ export class TwitterPostClient {
                     twitterPostTemplate,
             });
 
-            elizaLogger.debug("generate post prompt:\n" + context);
+            const isGenerateTarot = Math.random() < 0.75;
 
-            const response = await generateText({
-                runtime: this.runtime,
-                context,
-                modelClass: ModelClass.SMALL,
-            });
+            let tweetTextForPosting: string;
+            let mediaData: MediaData[];
+            let rawTweetContent: string;
 
-            const rawTweetContent = cleanJsonResponse(response);
+            if (isGenerateTarot) {
+                const { media, prediction } = await getTarotPrediction(
+                    this.runtime,
+                    state
+                );
+                tweetTextForPosting = prediction;
+                mediaData = [{ data: media, mediaType: "image/png" }];
+                rawTweetContent = prediction;
+            } else {
+                elizaLogger.debug("generate post prompt:\n" + context);
 
-            // First attempt to clean content
-            let tweetTextForPosting = null;
-            let mediaData = null;
+                const response = await generateText({
+                    runtime: this.runtime,
+                    context,
+                    modelClass: ModelClass.SMALL,
+                });
 
-            // Try parsing as JSON first
-            const parsedResponse = parseJSONObjectFromText(rawTweetContent);
-            if (parsedResponse?.text) {
-                tweetTextForPosting = parsedResponse.text;
-            }
+                rawTweetContent = cleanJsonResponse(response);
 
-            if (
-                parsedResponse?.attachments &&
-                parsedResponse?.attachments.length > 0
-            ) {
-                mediaData = await fetchMediaData(parsedResponse.attachments);
-            }
+                // First attempt to clean content
+                tweetTextForPosting = null;
+                mediaData = null;
 
-            // Try extracting text attribute
-            if (!tweetTextForPosting) {
-                const parsingText = extractAttributes(rawTweetContent, [
-                    "text",
-                ]).text;
-                if (parsingText) {
-                    tweetTextForPosting = truncateToCompleteSentence(
-                        extractAttributes(rawTweetContent, ["text"]).text,
-                        this.client.twitterConfig.MAX_TWEET_LENGTH
+                // Try parsing as JSON first
+                const parsedResponse = parseJSONObjectFromText(rawTweetContent);
+                if (parsedResponse?.text) {
+                    tweetTextForPosting = parsedResponse.text;
+                }
+
+                if (
+                    parsedResponse?.attachments &&
+                    parsedResponse?.attachments?.length > 0
+                ) {
+                    mediaData = await fetchMediaData(
+                        parsedResponse.attachments
                     );
                 }
-            }
 
-            // Use the raw text
-            if (!tweetTextForPosting) {
-                tweetTextForPosting = rawTweetContent;
+                // Try extracting text attribute
+                if (!tweetTextForPosting) {
+                    const parsingText = extractAttributes(rawTweetContent, [
+                        "text",
+                    ]).text;
+                    if (parsingText) {
+                        tweetTextForPosting = truncateToCompleteSentence(
+                            extractAttributes(rawTweetContent, ["text"]).text,
+                            this.client.twitterConfig.MAX_TWEET_LENGTH
+                        );
+                    }
+                }
+
+                // Use the raw text
+                if (!tweetTextForPosting) {
+                    tweetTextForPosting = rawTweetContent;
+                }
             }
 
             // Truncate the content to the maximum tweet length specified in the environment settings, ensuring the truncation respects sentence boundaries.
             if (maxTweetLength) {
-                tweetTextForPosting = truncateToCompleteSentence(
-                    tweetTextForPosting,
-                    maxTweetLength
-                );
+                try {
+                    elizaLogger.debug(
+                        "truncateToCompleteSentence:\n" +
+                            tweetTextForPosting +
+                            "\n" +
+                            maxTweetLength
+                    );
+                    tweetTextForPosting = truncateToCompleteSentence(
+                        tweetTextForPosting,
+                        maxTweetLength
+                    );
+                } catch (error) {
+                    elizaLogger.error(
+                        "Error truncating tweet text:",
+                        error?.message
+                    );
+                }
             }
 
             const removeQuotes = (str: string) =>
@@ -629,7 +661,7 @@ export class TwitterPostClient {
                 elizaLogger.error("Error sending tweet:", error);
             }
         } catch (error) {
-            elizaLogger.error("Error generating new tweet:", error);
+            elizaLogger.error("Error generating new tweet:", error?.message);
         }
     }
 

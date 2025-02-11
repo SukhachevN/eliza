@@ -95,7 +95,6 @@ import { lensPlugin } from "@elizaos/plugin-lens-network";
 import { litPlugin } from "@elizaos/plugin-lit";
 import { mindNetworkPlugin } from "@elizaos/plugin-mind-network";
 import { multiversxPlugin } from "@elizaos/plugin-multiversx";
-import { nearPlugin } from "@elizaos/plugin-near";
 import createNFTCollectionsPlugin from "@elizaos/plugin-nft-collections";
 import { nftGenerationPlugin } from "@elizaos/plugin-nft-generation";
 import { createNodePlugin } from "@elizaos/plugin-node";
@@ -155,6 +154,10 @@ import { ankrPlugin } from "@elizaos/plugin-ankr";
 import { formPlugin } from "@elizaos/plugin-form";
 import { MongoClient } from "mongodb";
 import { quickIntelPlugin } from "@elizaos/plugin-quick-intel";
+import { tarotPlugin } from "@elizaos/plugin-tarot";
+
+import express from "express";
+import cors from "cors";
 
 import { trikonPlugin } from "@elizaos/plugin-trikon";
 import arbitragePlugin from "@elizaos/plugin-arbitrage";
@@ -1057,12 +1060,9 @@ export async function createAgent(
                 ? solanaAgentkitPlugin
                 : null,
             getSecret(character, "AUTONOME_JWT_TOKEN") ? autonomePlugin : null,
-            (getSecret(character, "NEAR_ADDRESS") ||
+            ((getSecret(character, "NEAR_ADDRESS") ||
                 getSecret(character, "NEAR_WALLET_PUBLIC_KEY")) &&
-            getSecret(character, "NEAR_WALLET_SECRET_KEY")
-                ? nearPlugin
-                : null,
-            getSecret(character, "EVM_PUBLIC_KEY") ||
+                getSecret(character, "EVM_PUBLIC_KEY")) ||
             (getSecret(character, "WALLET_PUBLIC_KEY") &&
                 getSecret(character, "WALLET_PUBLIC_KEY")?.startsWith("0x"))
                 ? evmPlugin
@@ -1295,6 +1295,7 @@ export async function createAgent(
             getSecret(character, "ARBITRAGE_BUNDLE_EXECUTOR_ADDRESS")
                 ? arbitragePlugin
                 : null,
+            tarotPlugin,
         ]
             .flat()
             .filter(Boolean),
@@ -1540,3 +1541,112 @@ if (
         console.error("unhandledRejection", err);
     });
 }
+
+let dbAdapter: IDatabaseAdapter & IDatabaseCacheAdapter;
+
+const app = express();
+app.use(cors());
+
+app.get("/memories", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer') 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer')`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching memories:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/plugin-tarot-logs", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM "plugin-tarot-logs" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "plugin-tarot-logs"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching plugin-tarot-logs:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.listen(3001, () => {
+    try {
+        const dataDir = path.join(__dirname, "../data");
+
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        dbAdapter = initializeDatabase(dataDir) as IDatabaseAdapter &
+            IDatabaseCacheAdapter;
+        dbAdapter.init();
+
+        elizaLogger.info("Memories API is running on port 3001");
+    } catch (error) {
+        elizaLogger.error("Error starting memories API:", error?.message);
+    }
+});
