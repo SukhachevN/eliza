@@ -7,6 +7,7 @@ import {
     ModelClass,
     State,
     composeContext,
+    elizaLogger,
 } from "@elizaos/core";
 import { createCanvas, loadImage } from "canvas";
 import path from "path";
@@ -165,6 +166,42 @@ async function generateWithRetry(
     }
 }
 
+const getPostsFromLastThreeHours = async (runtime: IAgentRuntime) => {
+    try {
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+        const posts = await runtime.databaseAdapter.db
+            .prepare(
+                `SELECT id, createdAt, content FROM memories 
+             WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer') 
+             AND createdAt >= ?
+             ORDER BY createdAt DESC`
+            )
+            .all(threeHoursAgo.getTime());
+
+        const postsText = posts.map(({ content }) => {
+            try {
+                const parsedContent = JSON.parse(content);
+
+                if (parsedContent.inReplyTo) {
+                    return "";
+                }
+
+                return `[${new Date(
+                    parsedContent.createdAt
+                ).toLocaleString()}]: ${parsedContent.text}`;
+            } catch {
+                return "";
+            }
+        });
+
+        return postsText.filter(Boolean).join("\n");
+    } catch {
+        elizaLogger.error("Error getting posts from last three hours");
+        return "";
+    }
+};
+
 export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
@@ -189,6 +226,13 @@ export const getTarotPrediction = async (
         })
         .join("\n");
 
+    insertTarotLog(
+        runtime.databaseAdapter.db,
+        `cardsDescription: ${cardsDescription}`
+    );
+
+    const posts = await getPostsFromLastThreeHours(runtime);
+
     const choice = isForAllTokens
         ? `decide which particular token would be the most interesting to spread tarot for tarotmancer (the higher mcap and volume fluctuations a token has - the higher interest it would have).`
         : `choose a token from the received data set with the highest tweet mentions to spread tarot for on behalf of tarotmancer. If the chosen token is the same token you have tweeted about in the last 3 hours, then choose a token with the next highest tweet mentions.`;
@@ -208,6 +252,9 @@ export const getTarotPrediction = async (
 
         {{postDirections}}
 
+        Your posts in the last 3 hours:
+        ${posts}
+
         Task:
         1) check the data received from Tokens data.
         2) ${choice}.
@@ -224,6 +271,7 @@ export const getTarotPrediction = async (
         4. Your prediction should have a straightforward advice (buy or sell the token).
         5. Your prediction can lean towards buying strong tokens during potential lows, but only when the context and evidence strongly support it.
         6. MUST BE LESS THAN 200 CHARACTERS. No hashtags and emojis. The tweet should be lowercased.
+        7. DO NOT USE A TOKEN THAT WAS IN YOUR POSTS IN THE LAST 3 HOURS. IF ALL TOKENS HAVE BEEN USED, CHOOSE THE ONE THAT HAS NOT BEEN USED FOR THE LONGEST TIME.
 
         Examples of valid responses:
 
@@ -380,6 +428,22 @@ export const getTarotPrediction = async (
         cardWidth,
         cardsHeight
     );
+
+    const tickerRegex = /\$([a-zA-Z]+)/;
+    const tickerMatch = response.prediction?.match(tickerRegex);
+    const ticker = tickerMatch ? tickerMatch[1] : null;
+
+    if (ticker) {
+        insertTarotLog(runtime.databaseAdapter.db, `Choosed token: ${ticker}`);
+    }
+
+    const verdictRegex = /(verdict:|tldr:)[^.]*(buy|sell)[^.]*\./i;
+    const verdictMatch = response.prediction?.match(verdictRegex);
+    const verdict = verdictMatch ? verdictMatch[0].trim() : null;
+
+    if (verdict) {
+        insertTarotLog(runtime.databaseAdapter.db, `Verdict: ${verdict}`);
+    }
 
     const buffer = canvas.toBuffer("image/png");
 
