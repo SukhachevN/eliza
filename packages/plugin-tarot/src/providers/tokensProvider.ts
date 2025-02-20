@@ -26,13 +26,14 @@ export const tokensProvider: Provider = {
             `Choosing tokens for context: ${cacheKey}`
         );
 
-        await _runtime.cacheManager.set("tokens-choice", cacheKey, {
-            expires: new Date().getTime() + 1000 * 60 * 60 * 24,
-        });
+        await _runtime.cacheManager.set("tokens-choice", cacheKey);
 
-        const tokens = await _runtime.cacheManager.get(cacheKey);
+        const [tokens, tokensExpireTime] = await Promise.all([
+            _runtime.cacheManager.get(cacheKey),
+            _runtime.cacheManager.get(`${cacheKey}-expire-time`),
+        ]);
 
-        if (tokens) {
+        if (tokens && tokensExpireTime && +tokensExpireTime > Date.now()) {
             insertTarotLog(
                 _runtime.databaseAdapter.db,
                 `Tokens already cached: ${cacheKey}`
@@ -51,6 +52,14 @@ export const tokensProvider: Provider = {
         ]);
 
         let tokensForSave = [...newTokens, ...topTokens];
+
+        if (!tokensForSave.length) {
+            insertTarotLog(
+                _runtime.databaseAdapter.db,
+                `Failed to get tokens from dexscreener and coingecko, using cached tokens: ${tokens}`
+            );
+            return tokens;
+        }
 
         if (isNewTokens) {
             const sortedTokens = [...newTokens, ...topTokens].sort(
@@ -102,11 +111,14 @@ export const tokensProvider: Provider = {
             `Tokens data for context: ${result}`
         );
 
-        await _runtime.cacheManager.set(cacheKey, result, {
-            expires:
+        await Promise.all([
+            _runtime.cacheManager.set(cacheKey, result),
+            _runtime.cacheManager.set(
+                `${cacheKey}-expire-time`,
                 new Date().getTime() +
-                Number(process.env.REFETCH_INTERVAL) * 60 * 1000,
-        });
+                    Number(process.env.REFETCH_INTERVAL) * 60 * 1000
+            ),
+        ]);
 
         return result;
     },
