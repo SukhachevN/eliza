@@ -166,9 +166,9 @@ async function generateWithRetry(
     }
 }
 
-const getPostsFromLastThreeHours = async (runtime: IAgentRuntime) => {
+const getPostsFromLastHours = async (runtime: IAgentRuntime, hours: number) => {
     try {
-        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
 
         const posts = await runtime.databaseAdapter.db
             .prepare(
@@ -177,7 +177,7 @@ const getPostsFromLastThreeHours = async (runtime: IAgentRuntime) => {
              AND createdAt >= ?
              ORDER BY createdAt DESC`
             )
-            .all(threeHoursAgo.getTime());
+            .all(hoursAgo.getTime());
 
         const postsText = posts.map(({ content }) => {
             try {
@@ -197,7 +197,7 @@ const getPostsFromLastThreeHours = async (runtime: IAgentRuntime) => {
 
         return postsText.filter(Boolean).join("\n");
     } catch {
-        elizaLogger.error("Error getting posts from last three hours");
+        elizaLogger.error(`Error getting posts from last ${hours} hours`);
         return "";
     }
 };
@@ -231,7 +231,11 @@ export const getTarotPrediction = async (
         `cardsDescription: ${cardsDescription}`
     );
 
-    const posts = await getPostsFromLastThreeHours(runtime);
+    const hours = process.env.MIN_TOKEN_REPEAT_HOURS
+        ? parseInt(process.env.MIN_TOKEN_REPEAT_HOURS)
+        : 6;
+
+    const posts = await getPostsFromLastHours(runtime, hours);
 
     const choice = isForAllTokens
         ? `decide which particular token would be the most interesting to spread tarot for tarotmancer (the higher mcap and volume fluctuations a token has - the higher interest it would have).`
@@ -252,7 +256,7 @@ export const getTarotPrediction = async (
 
         {{postDirections}}
 
-        Your posts in the last 3 hours:
+        Your posts in the last ${hours} hours:
         ${posts}
 
         Task:
@@ -271,7 +275,7 @@ export const getTarotPrediction = async (
         4. Your prediction should have a straightforward advice (buy or sell the token).
         5. Your prediction can lean towards buying strong tokens during potential lows, but only when the context and evidence strongly support it.
         6. MUST BE LESS THAN 200 CHARACTERS. No hashtags and emojis. The tweet should be lowercased.
-        7. DO NOT USE A TOKEN THAT WAS IN YOUR POSTS IN THE LAST 3 HOURS. IF ALL TOKENS HAVE BEEN USED, CHOOSE THE ONE THAT HAS NOT BEEN USED FOR THE LONGEST TIME.
+        7. DO NOT USE A TOKEN THAT WAS IN YOUR POSTS IN THE LAST ${hours} HOURS. IF ALL TOKENS HAVE BEEN USED, CHOOSE THE ONE THAT HAS NOT BEEN USED FOR THE LONGEST TIME.
 
         Examples of valid responses:
 
