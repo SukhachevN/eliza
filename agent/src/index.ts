@@ -1507,7 +1507,7 @@ const startAgents = async () => {
                         error?.message
                     );
                 }
-            }, 1000 * 60 * 5);
+            }, Number(process.env.BITCOIN_PREDICTION_INTERVAL) * 60 * 1000);
         }
     } catch (error) {
         elizaLogger.error("Error starting agents:", error?.message);
