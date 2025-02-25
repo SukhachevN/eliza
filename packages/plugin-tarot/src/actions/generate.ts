@@ -1,10 +1,8 @@
 import {
     Action,
-    generateText,
     HandlerCallback,
     IAgentRuntime,
     Memory,
-    ModelClass,
     State,
     composeContext,
     elizaLogger,
@@ -14,157 +12,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { insertTarotLog } from "../utils";
+import {
+    CARD_WIDTH,
+    CARDS_GAP,
+    CARDS_HEIGHT,
+    CARDS_X,
+    CARDS_Y,
+} from "./constants";
+import { generateRandomCards, generateWithRetry } from "./utils";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const cardWidth = 503;
-const cardsGap = 139;
-const cardsY = 442;
-const cardsX = 635;
-const cardsHeight = 836;
-
-const MAJOR_ARCANA = [
-    "chariot",
-    "empress",
-    "hierophant",
-    "lovers",
-    "strength",
-    "wheel-of-fortune",
-    "death",
-    "fool",
-    "high-priestress",
-    "magician",
-    "sun",
-    "world",
-    "devil",
-    "hanged-man",
-    "judgement",
-    "moon",
-    "temperance",
-    "emperor",
-    "hermit",
-    "justice",
-    "star",
-    "tower",
-];
-const MINOR_ARCANA_VALUES = [
-    "10",
-    "3",
-    "5",
-    "7",
-    "9",
-    "king",
-    "page",
-    "2",
-    "4",
-    "6",
-    "8",
-    "ace",
-    "knight",
-    "queen",
-];
-const MINOR_ARCANA_SUBTYPES = ["wands", "cups", "swords", "pentacles"];
-
-function generateRandomCards() {
-    const cards = [];
-    const usedCards = new Set();
-
-    while (cards.length < 3) {
-        const isMajorArcana = Math.random() < 0.5;
-
-        if (isMajorArcana) {
-            const value =
-                MAJOR_ARCANA[Math.floor(Math.random() * MAJOR_ARCANA.length)];
-            const cardKey = `major-${value}`;
-
-            if (!usedCards.has(cardKey)) {
-                cards.push({
-                    type: "major-arcana",
-                    value,
-                });
-                usedCards.add(cardKey);
-            }
-        } else {
-            const subtype =
-                MINOR_ARCANA_SUBTYPES[
-                    Math.floor(Math.random() * MINOR_ARCANA_SUBTYPES.length)
-                ];
-            const value =
-                MINOR_ARCANA_VALUES[
-                    Math.floor(Math.random() * MINOR_ARCANA_VALUES.length)
-                ];
-            const cardKey = `minor-${subtype}-${value}`;
-
-            if (!usedCards.has(cardKey)) {
-                cards.push({
-                    type: "minor-arcana",
-                    subtype,
-                    value,
-                });
-                usedCards.add(cardKey);
-            }
-        }
-    }
-
-    return cards;
-}
-
-async function generateWithRetry(
-    runtime: IAgentRuntime,
-    context: string,
-    maxAttempts: number = 3,
-    exactWordsToCheck: string[] = []
-) {
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-        try {
-            const prediction = await generateText({
-                runtime,
-                context,
-                modelClass: ModelClass.SMALL,
-            });
-
-            const isExactWordsPresent =
-                !exactWordsToCheck?.length ||
-                exactWordsToCheck.some((word) =>
-                    prediction.toLowerCase().includes(word.toLowerCase())
-                );
-
-            if (!isExactWordsPresent) {
-                insertTarotLog(
-                    runtime.databaseAdapter.db,
-                    `Exact words not found in the prediction: ${exactWordsToCheck.join(
-                        ", "
-                    )}\n\nPrediction: ${prediction}`
-                );
-                throw new Error("Exact words not found in the prediction");
-            }
-
-            if (!prediction) {
-                insertTarotLog(
-                    runtime.databaseAdapter.db,
-                    "Empty prediction received"
-                );
-                throw new Error("Empty prediction received");
-            }
-
-            return prediction;
-        } catch (error) {
-            attempts++;
-
-            if (attempts >= maxAttempts) {
-                insertTarotLog(
-                    runtime.databaseAdapter.db,
-                    `Failed to generate valid prediction after ${maxAttempts} attempts due error: ${
-                        (error as Error).message
-                    }`
-                );
-            }
-        }
-    }
-}
 
 const getPostsFromLastHours = async (runtime: IAgentRuntime, hours: number) => {
     try {
@@ -206,6 +64,7 @@ export const getTarotPrediction = async (
     runtime: IAgentRuntime,
     state: State
 ) => {
+    elizaLogger.info(state);
     insertTarotLog(runtime.databaseAdapter.db, "SPREAD_TAROT action called");
 
     const cards = generateRandomCards();
@@ -417,20 +276,20 @@ export const getTarotPrediction = async (
 
     ctx.drawImage(template, 0, 0);
 
-    ctx.drawImage(firstCard, cardsX, cardsY, cardWidth, cardsHeight);
+    ctx.drawImage(firstCard, CARDS_X, CARDS_Y, CARD_WIDTH, CARDS_HEIGHT);
     ctx.drawImage(
         secondCard,
-        cardsX + cardWidth + cardsGap,
-        cardsY,
-        cardWidth,
-        cardsHeight
+        CARDS_X + CARD_WIDTH + CARDS_GAP,
+        CARDS_Y,
+        CARD_WIDTH,
+        CARDS_HEIGHT
     );
     ctx.drawImage(
         thirdCard,
-        cardsX + cardWidth * 2 + cardsGap * 2,
-        cardsY,
-        cardWidth,
-        cardsHeight
+        CARDS_X + CARD_WIDTH * 2 + CARDS_GAP * 2,
+        CARDS_Y,
+        CARD_WIDTH,
+        CARDS_HEIGHT
     );
 
     const tickerRegex = /\$([a-zA-Z]+)/;

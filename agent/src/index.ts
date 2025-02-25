@@ -42,9 +42,11 @@ import {
     type ICacheManager,
     type IDatabaseAdapter,
     type IDatabaseCacheAdapter,
+    Memory,
     ModelProviderName,
     parseBooleanFromText,
     settings,
+    State,
     stringToUuid,
     validateCharacterConfig,
 } from "@elizaos/core";
@@ -154,7 +156,7 @@ import { ankrPlugin } from "@elizaos/plugin-ankr";
 import { formPlugin } from "@elizaos/plugin-form";
 import { MongoClient } from "mongodb";
 import { quickIntelPlugin } from "@elizaos/plugin-quick-intel";
-import { tarotPlugin } from "@elizaos/plugin-tarot";
+import { tarotPlugin, generateBitcoinPrediction } from "@elizaos/plugin-tarot";
 
 import express from "express";
 import cors from "cors";
@@ -1484,10 +1486,31 @@ const startAgents = async () => {
 
     try {
         for (const character of characters) {
-            await startAgent(character, directClient);
+            const result = await startAgent(character, directClient);
+
+            setInterval(async () => {
+                try {
+                    const state = await result.composeState({
+                        roomId: stringToUuid("bitcoin-predictions-room"),
+                        userId: result.agentId,
+                        agentId: result.agentId,
+                        content: { text: "" },
+                    } as Memory);
+
+                    generateBitcoinPrediction(
+                        result.knowledgeManager.runtime,
+                        state
+                    );
+                } catch (error) {
+                    elizaLogger.error(
+                        "Error generating bitcoin prediction:",
+                        error?.message
+                    );
+                }
+            }, 1000 * 60 * 5);
         }
     } catch (error) {
-        elizaLogger.error("Error starting agents:", error);
+        elizaLogger.error("Error starting agents:", error?.message);
     }
 
     // Find available port
@@ -1627,6 +1650,51 @@ app.get("/plugin-tarot-logs", async (req, res) => {
         });
     } catch (error) {
         elizaLogger.error("Error fetching plugin-tarot-logs:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/bitcoin-predictions", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM "bitcoin-predictions" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "bitcoin-predictions"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error(
+            "Error fetching bitcoin-predictions:",
+            error?.message
+        );
         res.status(500).json({
             error: error?.message || "Internal server error",
         });
