@@ -1,4 +1,11 @@
-import { generateText, IAgentRuntime, ModelClass } from "@elizaos/core";
+import {
+    cleanJsonResponse,
+    elizaLogger,
+    generateText,
+    IAgentRuntime,
+    ModelClass,
+    parseJSONObjectFromText,
+} from "@elizaos/core";
 import { insertTarotLog } from "../utils";
 import {
     MAJOR_ARCANA,
@@ -108,4 +115,55 @@ export async function generateWithRetry(
             }
         }
     }
+}
+
+export async function generateStructureWithRetry<Structure>(
+    runtime: IAgentRuntime,
+    context: string,
+    structure: Structure,
+    maxAttempts: number = 3
+): Promise<Structure | null> {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        try {
+            const prediction = await generateText({
+                runtime,
+                context,
+                modelClass: ModelClass.SMALL,
+            });
+
+            if (!prediction) {
+                throw new Error("Empty prediction received");
+            }
+
+            const cleanedPrediction = cleanJsonResponse(prediction);
+
+            const parsed = parseJSONObjectFromText(cleanedPrediction);
+
+            if (!isValidStructure(parsed, structure)) {
+                throw new Error(
+                    "Generated structure does not match the expected format"
+                );
+            }
+
+            return parsed as Structure;
+        } catch (error) {
+            attempts++;
+            elizaLogger.error(
+                `Error while generating answer with structure: ${error?.message}`
+            );
+        }
+    }
+
+    return null;
+}
+
+function isValidStructure<K extends string | number | symbol, V>(
+    data: any,
+    template: Record<K, V>
+): data is Record<K, V> {
+    if (typeof data !== "object" || data === null) return false;
+
+    return Object.keys(template).every((key) => key in data);
 }

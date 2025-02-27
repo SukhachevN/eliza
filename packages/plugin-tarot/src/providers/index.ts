@@ -1,2 +1,2 @@
 export * from "./tokensProvider.ts";
-export * from "./bitcoinInfoProvider.ts";
+export * from "./bitcoinInfo.ts";

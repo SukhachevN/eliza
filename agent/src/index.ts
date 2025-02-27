@@ -1494,7 +1494,7 @@ const startAgents = async () => {
                         roomId: stringToUuid("bitcoin-predictions-room"),
                         userId: result.agentId,
                         agentId: result.agentId,
-                        content: { text: "" },
+                        content: { text: "Generate bitcoin prediction" },
                     } as Memory);
 
                     generateBitcoinPrediction(
@@ -1665,7 +1665,7 @@ app.get("/bitcoin-predictions", async (req, res) => {
         const [memories, totalCount] = await Promise.all([
             dbAdapter.db
                 .prepare(
-                    `SELECT id, createdAt, content FROM "bitcoin-predictions" 
+                    `SELECT id, createdAt, content, direction, bitcoinPrice, rightness FROM "bitcoin-predictions" 
                      ORDER BY createdAt DESC 
                      LIMIT ? OFFSET ?`
                 )
@@ -1701,7 +1701,23 @@ app.get("/bitcoin-predictions", async (req, res) => {
     }
 });
 
-app.listen(3001, () => {
+async function addColumnIfNotExists(
+    tableName: string,
+    column: string,
+    type: string
+) {
+    const rows = await dbAdapter.db.pragma(`table_info("${tableName}")`);
+
+    const existingColumns = new Set(rows.map((row) => row.name));
+
+    if (!existingColumns.has(column)) {
+        await dbAdapter.db.run(
+            `ALTER TABLE "${tableName}" ADD COLUMN "${column}" ${type}`
+        );
+    }
+}
+
+app.listen(3001, async () => {
     try {
         const dataDir = path.join(__dirname, "../data");
 
@@ -1713,8 +1729,16 @@ app.listen(3001, () => {
             IDatabaseCacheAdapter;
         dbAdapter.init();
 
-        elizaLogger.info("Memories API is running on port 3001");
+        await addColumnIfNotExists("bitcoin-predictions", "direction", "TEXT");
+        await addColumnIfNotExists("bitcoin-predictions", "rightness", "TEXT");
+        await addColumnIfNotExists(
+            "bitcoin-predictions",
+            "bitcoinPrice",
+            "REAL"
+        );
+
+        elizaLogger.info("API is running on port 3001");
     } catch (error) {
-        elizaLogger.error("Error starting memories API:", error?.message);
+        elizaLogger.error("Error starting API:", error?.message);
     }
 });
