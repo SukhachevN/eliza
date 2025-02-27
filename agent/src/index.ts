@@ -1711,9 +1711,11 @@ async function addColumnIfNotExists(
     const existingColumns = new Set(rows.map((row) => row.name));
 
     if (!existingColumns.has(column)) {
-        await dbAdapter.db.run(
-            `ALTER TABLE "${tableName}" ADD COLUMN "${column}" ${type}`
-        );
+        await dbAdapter.db
+            .prepare(
+                `ALTER TABLE "${tableName}" ADD COLUMN "${column}" ${type}`
+            )
+            .all();
     }
 }
 
