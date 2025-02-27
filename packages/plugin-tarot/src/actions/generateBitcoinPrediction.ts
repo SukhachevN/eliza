@@ -210,7 +210,7 @@ export const generateBitcoinPrediction = async (
         try {
             const getLastPredictionQuery = `
             SELECT id, direction, bitcoinPrice 
-            FROM "bitcoin-predictions" 
+            FROM "bitcoin-prediction" 
             WHERE rightness = 'NOT CHECKED' 
             ORDER BY createdAt DESC 
             LIMIT 1
@@ -235,7 +235,7 @@ export const generateBitcoinPrediction = async (
                 }
 
                 const updateQuery = `
-                UPDATE "bitcoin-predictions" 
+                UPDATE "bitcoin-prediction" 
                 SET rightness = ? 
                 WHERE id = ?
                 `;
@@ -253,7 +253,7 @@ export const generateBitcoinPrediction = async (
         if (checkVerdict) {
             try {
                 const query = `
-            INSERT INTO "bitcoin-predictions" (content, direction, bitcoinPrice, rightness)
+            INSERT INTO "bitcoin-prediction" (content, direction, bitcoinPrice, rightness)
             VALUES (?, ?, ?, ?)
     `;
 

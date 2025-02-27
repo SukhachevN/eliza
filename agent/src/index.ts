@@ -1491,7 +1491,7 @@ const startAgents = async () => {
             setInterval(async () => {
                 try {
                     const state = await result.composeState({
-                        roomId: stringToUuid("bitcoin-predictions-room"),
+                        roomId: stringToUuid("bitcoin-prediction-room"),
                         userId: result.agentId,
                         agentId: result.agentId,
                         content: { text: "Generate bitcoin prediction" },
@@ -1665,7 +1665,7 @@ app.get("/bitcoin-predictions", async (req, res) => {
         const [memories, totalCount] = await Promise.all([
             dbAdapter.db
                 .prepare(
-                    `SELECT id, createdAt, content, direction, bitcoinPrice, rightness FROM "bitcoin-predictions" 
+                    `SELECT id, createdAt, content, direction, bitcoinPrice, rightness FROM "bitcoin-prediction" 
                      ORDER BY createdAt DESC 
                      LIMIT ? OFFSET ?`
                 )
@@ -1674,7 +1674,7 @@ app.get("/bitcoin-predictions", async (req, res) => {
             dbAdapter.db
                 .prepare(
                     `SELECT COUNT(*) as count 
-                     FROM "bitcoin-predictions"`
+                     FROM "bitcoin-prediction"`
                 )
                 .get(),
         ]);
@@ -1691,33 +1691,12 @@ app.get("/bitcoin-predictions", async (req, res) => {
             },
         });
     } catch (error) {
-        elizaLogger.error(
-            "Error fetching bitcoin-predictions:",
-            error?.message
-        );
+        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
         res.status(500).json({
             error: error?.message || "Internal server error",
         });
     }
 });
-
-async function addColumnIfNotExists(
-    tableName: string,
-    column: string,
-    type: string
-) {
-    const rows = await dbAdapter.db.pragma(`table_info("${tableName}")`);
-
-    const existingColumns = new Set(rows.map((row) => row.name));
-
-    if (!existingColumns.has(column)) {
-        await dbAdapter.db
-            .prepare(
-                `ALTER TABLE "${tableName}" ADD COLUMN "${column}" ${type}`
-            )
-            .all();
-    }
-}
 
 app.listen(3001, async () => {
     try {
@@ -1730,14 +1709,6 @@ app.listen(3001, async () => {
         dbAdapter = initializeDatabase(dataDir) as IDatabaseAdapter &
             IDatabaseCacheAdapter;
         dbAdapter.init();
-
-        await addColumnIfNotExists("bitcoin-predictions", "direction", "TEXT");
-        await addColumnIfNotExists("bitcoin-predictions", "rightness", "TEXT");
-        await addColumnIfNotExists(
-            "bitcoin-predictions",
-            "bitcoinPrice",
-            "REAL"
-        );
 
         elizaLogger.info("API is running on port 3001");
     } catch (error) {
