@@ -240,7 +240,7 @@ export const generateBitcoinPrediction = async (
                 WHERE id = ?
                 `;
 
-                const updateResult = await runtime.databaseAdapter.db
+                await runtime.databaseAdapter.db
                     .prepare(updateQuery)
                     .run(rightness, lastPrediction.id);
             }

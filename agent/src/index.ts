@@ -1698,6 +1698,43 @@ app.get("/bitcoin-predictions", async (req, res) => {
     }
 });
 
+app.get("/bitcoin-predictions-accuracy", async (req, res) => {
+    const from = req.query.from
+        ? req.query.from.toString()
+        : "0000-00-00 00:00:00";
+    const to = req.query.to
+        ? req.query.to.toString()
+        : new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    try {
+        const result = await dbAdapter.db
+            .prepare(
+                `SELECT 
+                    COUNT(*) AS totalItems,
+                    COALESCE(SUM(CASE WHEN rightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS notChecked,
+                    COALESCE(SUM(CASE WHEN rightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS correct,
+                    COALESCE(SUM(CASE WHEN rightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS incorrect
+                 FROM "bitcoin-prediction"
+                 WHERE createdAt BETWEEN ? AND ?`
+            )
+            .get(from, to);
+
+        res.json({
+            totalItems: result.totalItems || 0,
+            rightnessStats: {
+                "NOT CHECKED": result.notChecked || 0,
+                CORRECT: result.correct || 0,
+                INCORRECT: result.incorrect || 0,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
 app.listen(3001, async () => {
     try {
         const dataDir = path.join(__dirname, "../data");
