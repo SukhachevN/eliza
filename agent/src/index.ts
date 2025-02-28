@@ -42,9 +42,11 @@ import {
     type ICacheManager,
     type IDatabaseAdapter,
     type IDatabaseCacheAdapter,
+    Memory,
     ModelProviderName,
     parseBooleanFromText,
     settings,
+    State,
     stringToUuid,
     validateCharacterConfig,
 } from "@elizaos/core";
@@ -154,7 +156,7 @@ import { ankrPlugin } from "@elizaos/plugin-ankr";
 import { formPlugin } from "@elizaos/plugin-form";
 import { MongoClient } from "mongodb";
 import { quickIntelPlugin } from "@elizaos/plugin-quick-intel";
-import { tarotPlugin } from "@elizaos/plugin-tarot";
+import { tarotPlugin, generateBitcoinPrediction } from "@elizaos/plugin-tarot";
 
 import express from "express";
 import cors from "cors";
@@ -1484,10 +1486,31 @@ const startAgents = async () => {
 
     try {
         for (const character of characters) {
-            await startAgent(character, directClient);
+            const result = await startAgent(character, directClient);
+
+            setInterval(async () => {
+                try {
+                    const state = await result.composeState({
+                        roomId: stringToUuid("bitcoin-prediction-room"),
+                        userId: result.agentId,
+                        agentId: result.agentId,
+                        content: { text: "Generate bitcoin prediction" },
+                    } as Memory);
+
+                    generateBitcoinPrediction(
+                        result.knowledgeManager.runtime,
+                        state
+                    );
+                } catch (error) {
+                    elizaLogger.error(
+                        "Error generating bitcoin prediction:",
+                        error?.message
+                    );
+                }
+            }, Number(process.env.BITCOIN_PREDICTION_INTERVAL) * 60 * 1000);
         }
     } catch (error) {
-        elizaLogger.error("Error starting agents:", error);
+        elizaLogger.error("Error starting agents:", error?.message);
     }
 
     // Find available port
@@ -1633,7 +1656,86 @@ app.get("/plugin-tarot-logs", async (req, res) => {
     }
 });
 
-app.listen(3001, () => {
+app.get("/bitcoin-predictions", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content, direction, bitcoinPrice, rightness FROM "bitcoin-prediction" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "bitcoin-prediction"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/bitcoin-predictions-accuracy", async (req, res) => {
+    const from = req.query.from
+        ? req.query.from.toString()
+        : "0000-00-00 00:00:00";
+    const to = req.query.to
+        ? req.query.to.toString()
+        : new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    try {
+        const result = await dbAdapter.db
+            .prepare(
+                `SELECT 
+                    COUNT(*) AS totalItems,
+                    COALESCE(SUM(CASE WHEN rightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS notChecked,
+                    COALESCE(SUM(CASE WHEN rightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS correct,
+                    COALESCE(SUM(CASE WHEN rightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS incorrect
+                 FROM "bitcoin-prediction"
+                 WHERE createdAt BETWEEN ? AND ?`
+            )
+            .get(from, to);
+
+        res.json({
+            totalItems: result.totalItems || 0,
+            rightnessStats: {
+                "NOT CHECKED": result.notChecked || 0,
+                CORRECT: result.correct || 0,
+                INCORRECT: result.incorrect || 0,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.listen(3001, async () => {
     try {
         const dataDir = path.join(__dirname, "../data");
 
@@ -1645,8 +1747,8 @@ app.listen(3001, () => {
             IDatabaseCacheAdapter;
         dbAdapter.init();
 
-        elizaLogger.info("Memories API is running on port 3001");
+        elizaLogger.info("API is running on port 3001");
     } catch (error) {
-        elizaLogger.error("Error starting memories API:", error?.message);
+        elizaLogger.error("Error starting API:", error?.message);
     }
 });

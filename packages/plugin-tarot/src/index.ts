@@ -1,8 +1,8 @@
 import { Plugin } from "@elizaos/core";
 import { tokensProvider } from "./providers";
-import { getTarotPrediction } from "./actions";
+import { getTarotPrediction, generateBitcoinPrediction } from "./actions";
 
-export { getTarotPrediction };
+export { getTarotPrediction, generateBitcoinPrediction };
 
 export const tarotPlugin: Plugin = {
     name: "tarot",
