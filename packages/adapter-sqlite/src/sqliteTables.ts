@@ -115,14 +115,15 @@ CREATE TABLE IF NOT EXISTS "plugin-tarot-logs" (
     "content" TEXT NOT NULL
 );
 
--- Table: bitcoin-predictions
-CREATE TABLE IF NOT EXISTS "bitcoin-prediction" (
+-- Table: bitcoin-predictions-with-allora
+CREATE TABLE IF NOT EXISTS "bitcoin-predictions-with-allora" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "content" TEXT NOT NULL,
-    "rightness" TEXT,
+    "directionRightness" TEXT,
+    "priceRightness" TEXT,
     "direction" TEXT,
-    "bitcoinPrice" REAL
+    "bitcoinCurrentPrice" REAL,
+    "bitcoinPredictedPrice" REAL
 );
 
 -- Index: relationships_id_key
