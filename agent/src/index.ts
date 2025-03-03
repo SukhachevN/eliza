@@ -1209,7 +1209,7 @@ export async function createAgent(
             getSecret(character, "ARTHERA_PRIVATE_KEY")?.startsWith("0x")
                 ? artheraPlugin
                 : null,
-            getSecret(character, "ALLORA_API_KEY") ? alloraPlugin : null,
+            // getSecret(character, "ALLORA_API_KEY") ? alloraPlugin : null,
             getSecret(character, "HYPERLIQUID_PRIVATE_KEY")
                 ? hyperliquidPlugin
                 : null,
@@ -1491,10 +1491,14 @@ const startAgents = async () => {
             setInterval(async () => {
                 try {
                     const state = await result.composeState({
-                        roomId: stringToUuid("bitcoin-prediction-room"),
+                        roomId: stringToUuid(
+                            "bitcoin-predictions-with-allora-room"
+                        ),
                         userId: result.agentId,
                         agentId: result.agentId,
-                        content: { text: "Generate bitcoin prediction" },
+                        content: {
+                            text: "Generate bitcoin prediction with allora",
+                        },
                     } as Memory);
 
                     generateBitcoinPrediction(
@@ -1503,7 +1507,7 @@ const startAgents = async () => {
                     );
                 } catch (error) {
                     elizaLogger.error(
-                        "Error generating bitcoin prediction:",
+                        "Error generating bitcoin prediction with allora:",
                         error?.message
                     );
                 }
@@ -1656,7 +1660,7 @@ app.get("/plugin-tarot-logs", async (req, res) => {
     }
 });
 
-app.get("/bitcoin-predictions", async (req, res) => {
+app.get("/bitcoin-predictions-with-allora", async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
@@ -1665,7 +1669,7 @@ app.get("/bitcoin-predictions", async (req, res) => {
         const [memories, totalCount] = await Promise.all([
             dbAdapter.db
                 .prepare(
-                    `SELECT id, createdAt, content, direction, bitcoinPrice, rightness FROM "bitcoin-prediction" 
+                    `SELECT id, createdAt, directionRightness, priceRightness, direction, bitcoinCurrentPrice, bitcoinPredictedPrice FROM "bitcoin-predictions-with-allora" 
                      ORDER BY createdAt DESC 
                      LIMIT ? OFFSET ?`
                 )
@@ -1674,7 +1678,7 @@ app.get("/bitcoin-predictions", async (req, res) => {
             dbAdapter.db
                 .prepare(
                     `SELECT COUNT(*) as count 
-                     FROM "bitcoin-prediction"`
+                     FROM "bitcoin-predictions-with-allora"`
                 )
                 .get(),
         ]);
@@ -1691,7 +1695,10 @@ app.get("/bitcoin-predictions", async (req, res) => {
             },
         });
     } catch (error) {
-        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
+        elizaLogger.error(
+            "Error fetching bitcoin-predictions-with-allora:",
+            error?.message
+        );
         res.status(500).json({
             error: error?.message || "Internal server error",
         });
@@ -1711,24 +1718,41 @@ app.get("/bitcoin-predictions-accuracy", async (req, res) => {
             .prepare(
                 `SELECT 
                     COUNT(*) AS totalItems,
-                    COALESCE(SUM(CASE WHEN rightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS notChecked,
-                    COALESCE(SUM(CASE WHEN rightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS correct,
-                    COALESCE(SUM(CASE WHEN rightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS incorrect
-                 FROM "bitcoin-prediction"
+                    
+                    -- Direction accuracy counts
+                    COALESCE(SUM(CASE WHEN directionRightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS directionNotChecked,
+                    COALESCE(SUM(CASE WHEN directionRightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS directionCorrect,
+                    COALESCE(SUM(CASE WHEN directionRightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS directionIncorrect,
+                    
+                    -- Price accuracy counts
+                    COALESCE(SUM(CASE WHEN priceRightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS priceNotChecked,
+                    COALESCE(SUM(CASE WHEN priceRightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS priceCorrect,
+                    COALESCE(SUM(CASE WHEN priceRightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS priceIncorrect
+                    
+                 FROM "bitcoin-predictions-with-allora"
                  WHERE createdAt BETWEEN ? AND ?`
             )
             .get(from, to);
 
         res.json({
             totalItems: result.totalItems || 0,
-            rightnessStats: {
-                "NOT CHECKED": result.notChecked || 0,
-                CORRECT: result.correct || 0,
-                INCORRECT: result.incorrect || 0,
+            tolerance: +process.env.BITCOIN_PREDICTION_TOLERANCE || 0.002,
+            directionRightnessStats: {
+                "NOT CHECKED": result.directionNotChecked || 0,
+                CORRECT: result.directionCorrect || 0,
+                INCORRECT: result.directionIncorrect || 0,
+            },
+            priceRightnessStats: {
+                "NOT CHECKED": result.priceNotChecked || 0,
+                CORRECT: result.priceCorrect || 0,
+                INCORRECT: result.priceIncorrect || 0,
             },
         });
     } catch (error) {
-        elizaLogger.error("Error fetching bitcoin-prediction:", error?.message);
+        elizaLogger.error(
+            "Error fetching bitcoin-predictions accuracy:",
+            error?.message
+        );
         res.status(500).json({
             error: error?.message || "Internal server error",
         });
