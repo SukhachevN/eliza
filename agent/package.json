@@ -21,7 +21,10 @@
         "@elizaos/client-direct": "workspace:*",
         "@elizaos/core": "workspace:*",
         "@elizaos/plugin-bootstrap": "workspace:*",
+        "@elizaos/plugin-tarot": "workspace:*",
         "@types/node": "^22.13.5",
+        "cors": "2.8.5",
+        "express": "^4.21.2",
         "json5": "2.2.3",
         "ts-node": "^10.9.2",
         "yargs": "17.7.2"

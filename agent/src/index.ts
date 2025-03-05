@@ -22,7 +22,7 @@ import {
 import { defaultCharacter } from "./defaultCharacter.ts";
 
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
-import JSON5 from 'json5';
+import JSON5 from "json5";
 
 import fs from "fs";
 import net from "net";
@@ -30,6 +30,11 @@ import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
+
+import { tarotPlugin, generateBitcoinPrediction } from "@elizaos/plugin-tarot";
+
+import express from "express";
+import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -215,12 +220,24 @@ async function jsonToCharacter(
     }
     // Handle plugins
     character.plugins = await handlePluginImporting(character.plugins);
-    elizaLogger.info(character.name, 'loaded plugins:', "[\n    " + character.plugins.map(p => `"${p.npmName}"`).join(", \n    ") + "\n]");
+    elizaLogger.info(
+        character.name,
+        "loaded plugins:",
+        "[\n    " +
+            character.plugins.map((p) => `"${p.npmName}"`).join(", \n    ") +
+            "\n]"
+    );
 
     // Handle Post Processors plugins
     if (character.postProcessors?.length > 0) {
-        elizaLogger.info(character.name, 'loading postProcessors', character.postProcessors);
-        character.postProcessors = await handlePluginImporting(character.postProcessors);
+        elizaLogger.info(
+            character.name,
+            "loading postProcessors",
+            character.postProcessors
+        );
+        character.postProcessors = await handlePluginImporting(
+            character.postProcessors
+        );
     }
 
     // Handle extends
@@ -297,7 +314,9 @@ async function loadCharacterTryPath(characterPath: string): Promise<Character> {
     }
     try {
         const character: Character = await loadCharacter(resolvedPath);
-        elizaLogger.success(`Successfully loaded character from: ${resolvedPath}`);
+        elizaLogger.success(
+            `Successfully loaded character from: ${resolvedPath}`
+        );
         return character;
     } catch (e) {
         console.error(`Error parsing character from ${resolvedPath}: `, e);
@@ -376,19 +395,28 @@ async function handlePluginImporting(plugins: string[]) {
         const importedPlugins = await Promise.all(
             plugins.map(async (plugin) => {
                 try {
-                    const importedPlugin:Plugin = await import(plugin);
+                    const importedPlugin: Plugin = await import(plugin);
                     const functionName =
                         plugin
                             .replace("@elizaos/plugin-", "")
                             .replace("@elizaos-plugins/plugin-", "")
                             .replace(/-./g, (x) => x[1].toUpperCase()) +
                         "Plugin"; // Assumes plugin function is camelCased with Plugin suffix
-                    if (!importedPlugin[functionName] && !importedPlugin.default) {
-                      elizaLogger.warn(plugin, 'does not have an default export or', functionName)
+                    if (
+                        !importedPlugin[functionName] &&
+                        !importedPlugin.default
+                    ) {
+                        elizaLogger.warn(
+                            plugin,
+                            "does not have an default export or",
+                            functionName
+                        );
                     }
-                    return {...(
-                        importedPlugin.default || importedPlugin[functionName]
-                    ), npmName: plugin };
+                    return {
+                        ...(importedPlugin.default ||
+                            importedPlugin[functionName]),
+                        npmName: plugin,
+                    };
                 } catch (importError) {
                     console.error(
                         `Failed to import plugin: ${plugin}`,
@@ -397,9 +425,9 @@ async function handlePluginImporting(plugins: string[]) {
                     return false; // Return null for failed imports
                 }
             })
-        )
+        );
         // remove plugins that failed to load, so agent can try to start
-        return importedPlugins.filter(p => !!p);
+        return importedPlugins.filter((p) => !!p);
     } else {
         return [];
     }
@@ -569,7 +597,12 @@ export function getTokenForProvider(
             );
         case ModelProviderName.NEARAI:
             try {
-                const config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.nearai/config.json'), 'utf8'));
+                const config = JSON.parse(
+                    fs.readFileSync(
+                        path.join(os.homedir(), ".nearai/config.json"),
+                        "utf8"
+                    )
+                );
                 return JSON.stringify(config?.auth);
             } catch (e) {
                 elizaLogger.warn(`Error loading NEAR AI config: ${e}`);
@@ -602,9 +635,7 @@ export async function initializeClients(
             if (plugin.clients) {
                 for (const client of plugin.clients) {
                     const startedClient = await client.start(runtime);
-                    elizaLogger.debug(
-                        `Initializing client: ${client.name}`
-                    );
+                    elizaLogger.debug(`Initializing client: ${client.name}`);
                     clients.push(startedClient);
                 }
             }
@@ -625,11 +656,7 @@ export async function createAgent(
         evaluators: [],
         character,
         // character.plugins are handled when clients are added
-        plugins: [
-            bootstrapPlugin,
-        ]
-            .flat()
-            .filter(Boolean),
+        plugins: [bootstrapPlugin].flat().filter(Boolean),
         providers: [],
         managers: [],
         fetch: logFetch,
@@ -709,23 +736,29 @@ function initializeCache(
 }
 
 async function findDatabaseAdapter(runtime: AgentRuntime) {
-  const { adapters } = runtime;
-  let adapter: Adapter | undefined;
-  // if not found, default to sqlite
-  if (adapters.length === 0) {
-    const sqliteAdapterPlugin = await import('@elizaos-plugins/adapter-sqlite');
-    const sqliteAdapterPluginDefault = sqliteAdapterPlugin.default;
-    adapter = sqliteAdapterPluginDefault.adapters[0];
-    if (!adapter) {
-      throw new Error("Internal error: No database adapter found for default adapter-sqlite");
+    const { adapters } = runtime;
+    let adapter: Adapter | undefined;
+    // if not found, default to sqlite
+    if (adapters.length === 0) {
+        const sqliteAdapterPlugin = await import(
+            "@elizaos-plugins/adapter-sqlite"
+        );
+        const sqliteAdapterPluginDefault = sqliteAdapterPlugin.default;
+        adapter = sqliteAdapterPluginDefault.adapters[0];
+        if (!adapter) {
+            throw new Error(
+                "Internal error: No database adapter found for default adapter-sqlite"
+            );
+        }
+    } else if (adapters.length === 1) {
+        adapter = adapters[0];
+    } else {
+        throw new Error(
+            "Multiple database adapters found. You must have no more than one. Adjust your plugins configuration."
+        );
     }
-  } else if (adapters.length === 1) {
-    adapter = adapters[0];
-  } else {
-    throw new Error("Multiple database adapters found. You must have no more than one. Adjust your plugins configuration.");
-    }
-  const adapterInterface = adapter?.init(runtime);
-  return adapterInterface;
+    const adapterInterface = adapter?.init(runtime);
+    return adapterInterface;
 }
 
 async function startAgent(
@@ -739,14 +772,12 @@ async function startAgent(
 
         const token = getTokenForProvider(character.modelProvider, character);
 
-        const runtime: AgentRuntime = await createAgent(
-            character,
-            token
-        );
+        const runtime: AgentRuntime = await createAgent(character, token);
 
         // initialize database
         // find a db from the plugins
         db = await findDatabaseAdapter(runtime);
+        dbAdapter = db;
         runtime.databaseAdapter = db;
 
         // initialize cache
@@ -812,21 +843,31 @@ const hasValidRemoteUrls = () =>
  * Post processing of character after loading
  * @param character
  */
-const handlePostCharacterLoaded = async (character: Character): Promise<Character> => {
+const handlePostCharacterLoaded = async (
+    character: Character
+): Promise<Character> => {
     let processedCharacter = character;
     // Filtering the plugins with the method of handlePostCharacterLoaded
-    const processors = character?.postProcessors?.filter(p => typeof p.handlePostCharacterLoaded === 'function');
+    const processors = character?.postProcessors?.filter(
+        (p) => typeof p.handlePostCharacterLoaded === "function"
+    );
     if (processors?.length > 0) {
-        processedCharacter = Object.assign({}, character, { postProcessors: undefined });
+        processedCharacter = Object.assign({}, character, {
+            postProcessors: undefined,
+        });
         // process the character with each processor
         // the order is important, so we loop through the processors
         for (let i = 0; i < processors.length; i++) {
             const processor = processors[i];
-            processedCharacter = await processor.handlePostCharacterLoaded(processedCharacter);
+            processedCharacter = await processor.handlePostCharacterLoaded(
+                processedCharacter
+            );
         }
     }
     return processedCharacter;
-}
+};
+
+let dbAdapter: IDatabaseAdapter & IDatabaseCacheAdapter;
 
 const startAgents = async () => {
     const directClient = new DirectClient();
@@ -835,17 +876,45 @@ const startAgents = async () => {
     const charactersArg = args.characters || args.character;
     let characters = [defaultCharacter];
 
-    if ((charactersArg) || hasValidRemoteUrls()) {
+    if (charactersArg || hasValidRemoteUrls()) {
         characters = await loadCharacters(charactersArg);
     }
 
     try {
         for (const character of characters) {
-            const processedCharacter = await handlePostCharacterLoaded(character);
-            await startAgent(processedCharacter, directClient);
+            const processedCharacter = await handlePostCharacterLoaded(
+                character
+            );
+
+            const result = await startAgent(processedCharacter, directClient);
+
+            setInterval(async () => {
+                try {
+                    const state = await result.composeState({
+                        roomId: stringToUuid(
+                            "bitcoin-predictions-with-allora-room"
+                        ),
+                        userId: result.agentId,
+                        agentId: result.agentId,
+                        content: {
+                            text: "Generate bitcoin prediction with allora",
+                        },
+                    });
+
+                    generateBitcoinPrediction(
+                        result.knowledgeManager.runtime,
+                        state
+                    );
+                } catch (error) {
+                    elizaLogger.error(
+                        "Error generating bitcoin prediction with allora:",
+                        error?.message
+                    );
+                }
+            }, Number(process.env.BITCOIN_PREDICTION_INTERVAL) * 60 * 1000);
         }
     } catch (error) {
-        elizaLogger.error("Error starting agents:", error);
+        elizaLogger.error("Error starting agents:", error?.message);
     }
 
     // Find available port
@@ -861,12 +930,24 @@ const startAgents = async () => {
     directClient.startAgent = async (character) => {
         // Handle plugins
         character.plugins = await handlePluginImporting(character.plugins);
-        elizaLogger.info(character.name, 'loaded plugins:', '[' + character.plugins.map(p => `"${p.npmName}"`).join(', ') + ']');
+        elizaLogger.info(
+            character.name,
+            "loaded plugins:",
+            "[" +
+                character.plugins.map((p) => `"${p.npmName}"`).join(", ") +
+                "]"
+        );
 
         // Handle Post Processors plugins
         if (character.postProcessors?.length > 0) {
-            elizaLogger.info(character.name, 'loading postProcessors', character.postProcessors);
-            character.postProcessors = await handlePluginImporting(character.postProcessors);
+            elizaLogger.info(
+                character.name,
+                "loading postProcessors",
+                character.postProcessors
+            );
+            character.postProcessors = await handlePluginImporting(
+                character.postProcessors
+            );
         }
         // character's post processing
         const processedCharacter = await handlePostCharacterLoaded(character);
@@ -909,3 +990,205 @@ if (
         console.error("unhandledRejection", err);
     });
 }
+
+const app = express();
+app.use(cors());
+
+app.get("/memories", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer') 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM memories 
+                     WHERE userId IN (SELECT id FROM accounts WHERE name = 'tarotmancer')`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching memories:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/plugin-tarot-logs", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, content FROM "plugin-tarot-logs" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "plugin-tarot-logs"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error("Error fetching plugin-tarot-logs:", error?.message);
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/bitcoin-predictions-with-allora", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, directionRightness, priceRightness, direction, bitcoinCurrentPrice, bitcoinPredictedPrice FROM "bitcoin-predictions-with-allora" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "bitcoin-predictions-with-allora"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error(
+            "Error fetching bitcoin-predictions-with-allora:",
+            error?.message
+        );
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.get("/bitcoin-predictions-accuracy", async (req, res) => {
+    const from = req.query.from
+        ? req.query.from.toString()
+        : "0000-00-00 00:00:00";
+    const to = req.query.to
+        ? req.query.to.toString()
+        : new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    try {
+        const result = await dbAdapter.db
+            .prepare(
+                `SELECT 
+                    COUNT(*) AS totalItems,
+                    
+                    -- Direction accuracy counts
+                    COALESCE(SUM(CASE WHEN directionRightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS directionNotChecked,
+                    COALESCE(SUM(CASE WHEN directionRightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS directionCorrect,
+                    COALESCE(SUM(CASE WHEN directionRightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS directionIncorrect,
+                    
+                    -- Price accuracy counts
+                    COALESCE(SUM(CASE WHEN priceRightness = 'NOT CHECKED' THEN 1 ELSE 0 END), 0) AS priceNotChecked,
+                    COALESCE(SUM(CASE WHEN priceRightness = 'CORRECT' THEN 1 ELSE 0 END), 0) AS priceCorrect,
+                    COALESCE(SUM(CASE WHEN priceRightness = 'INCORRECT' THEN 1 ELSE 0 END), 0) AS priceIncorrect
+                    
+                 FROM "bitcoin-predictions-with-allora"
+                 WHERE createdAt BETWEEN ? AND ?`
+            )
+            .get(from, to);
+
+        res.json({
+            totalItems: result.totalItems || 0,
+            tolerance: +process.env.BITCOIN_PREDICTION_TOLERANCE || 0.002,
+            directionRightnessStats: {
+                "NOT CHECKED": result.directionNotChecked || 0,
+                CORRECT: result.directionCorrect || 0,
+                INCORRECT: result.directionIncorrect || 0,
+            },
+            priceRightnessStats: {
+                "NOT CHECKED": result.priceNotChecked || 0,
+                CORRECT: result.priceCorrect || 0,
+                INCORRECT: result.priceIncorrect || 0,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error(
+            "Error fetching bitcoin-predictions accuracy:",
+            error?.message
+        );
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
+app.listen(3001, async () => {
+    try {
+        const dataDir = path.join(__dirname, "../data");
+
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        elizaLogger.info("API is running on port 3001");
+    } catch (error) {
+        elizaLogger.error("Error starting API:", error?.message);
+    }
+});
