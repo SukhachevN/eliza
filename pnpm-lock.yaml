@@ -4935,8 +4935,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axe-core@4.10.2:
-    resolution: {integrity: sha512-RE3mdQ7P3FRSe7eqCWoeQ/Z9QXrtniSjp1wUjt5nRC3WIpz5rSCve6o3fsZ2aCpJtrZjSZgjwXAoTO5k4tEI0w==}
+  axe-core@4.10.3:
+    resolution: {integrity: sha512-Xm7bpRXnDSX2YE2YFfBk2FnF0ep6tmG7xPh8iHee8MIcrgq762Nkce856dYtJYLkuIoYZvGfTs/PbZhideTcEg==}
     engines: {node: '>=4'}
 
   axios-mock-adapter@1.22.0:
@@ -6711,8 +6711,8 @@ packages:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
 
-  exsolve@1.0.1:
-    resolution: {integrity: sha512-Smf0iQtkQVJLaph8r/qS8C8SWfQkaq9Q/dFcD44MLbJj6DNhlWefVuaS21SjfqOsBbjVlKtbCj6L9ekXK6EZUg==}
+  exsolve@1.0.2:
+    resolution: {integrity: sha512-ZEcIMbthn2zeX4/wD/DLxDUjuCltHXT8Htvm/JFlTkdYgWh2+HGppgwwNUnIVxzxP7yJOPtuBAec0dLx6lVY8w==}
 
   ext@1.7.0:
     resolution: {integrity: sha512-6hxeJYaL110a9b5TEJSj0gojyHQAmA2ch5Os+ySCiA1QGdS697XWY1pzsrSjqA9LDEEgdB/KypIlR59RcLuHYw==}
@@ -11144,8 +11144,8 @@ packages:
     resolution: {integrity: sha512-xZFXEGbG7SNC3itwBzI3RYjq/cEhBkx2hJuKGIUOcEULmkQExXiHat2z/qkISYsuR+IKumhEfKKbV5qXmhICFQ==}
     engines: {node: '>=4'}
 
-  terser-webpack-plugin@5.3.12:
-    resolution: {integrity: sha512-jDLYqo7oF8tJIttjXO6jBY5Hk8p3A8W4ttih7cCEq64fQFWmgJ4VqAQjKr7WwIDlmXKEc6QeoRb5ecjZ+2afcg==}
+  terser-webpack-plugin@5.3.13:
+    resolution: {integrity: sha512-JG3pBixF6kx2o0Yfz2K6pqh72DpwTI08nooHd06tcj5WyIt5SsSiUYqRT+kemrGUNSuSzVhwfZ28aO8gogajNQ==}
     engines: {node: '>= 10.13.0'}
     peerDependencies:
       '@swc/core': '*'
@@ -14339,7 +14339,7 @@ snapshots:
       postcss-loader: 7.3.4(postcss@8.5.3)(typescript@5.8.2)(webpack@5.98.0(@swc/core@1.11.7))
       postcss-preset-env: 10.1.5(postcss@8.5.3)
       react-dev-utils: 12.0.1(eslint@9.21.0(jiti@1.21.7))(typescript@5.8.2)(webpack@5.98.0(@swc/core@1.11.7))
-      terser-webpack-plugin: 5.3.12(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7))
+      terser-webpack-plugin: 5.3.13(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7))
       tslib: 2.8.1
       url-loader: 4.1.1(file-loader@6.2.0(webpack@5.98.0(@swc/core@1.11.7)))(webpack@5.98.0(@swc/core@1.11.7))
       webpack: 5.98.0(@swc/core@1.11.7)
@@ -18304,7 +18304,7 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axe-core@4.10.2: {}
+  axe-core@4.10.3: {}
 
   axios-mock-adapter@1.22.0(axios@1.8.1):
     dependencies:
@@ -20143,7 +20143,7 @@ snapshots:
       array-includes: 3.1.8
       array.prototype.flatmap: 1.3.3
       ast-types-flow: 0.0.8
-      axe-core: 4.10.2
+      axe-core: 4.10.3
       axobject-query: 4.1.0
       damerau-levenshtein: 1.0.8
       emoji-regex: 9.2.2
@@ -20509,7 +20509,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  exsolve@1.0.1: {}
+  exsolve@1.0.2: {}
 
   ext@1.7.0:
     dependencies:
@@ -24105,7 +24105,7 @@ snapshots:
   pkg-types@2.1.0:
     dependencies:
       confbox: 0.2.1
-      exsolve: 1.0.1
+      exsolve: 1.0.2
       pathe: 2.0.3
 
   pkg-up@3.1.0:
@@ -26139,7 +26139,7 @@ snapshots:
 
   temp-dir@1.0.0: {}
 
-  terser-webpack-plugin@5.3.12(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7)):
+  terser-webpack-plugin@5.3.13(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       jest-worker: 27.5.1
@@ -27201,7 +27201,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.0
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.12(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7))
+      terser-webpack-plugin: 5.3.13(@swc/core@1.11.7)(webpack@5.98.0(@swc/core@1.11.7))
       watchpack: 2.4.2
       webpack-sources: 3.2.3
     transitivePeerDependencies:
