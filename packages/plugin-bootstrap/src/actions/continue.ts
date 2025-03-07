@@ -91,6 +91,7 @@ export const continueAction: Action = {
         options: any,
         callback: HandlerCallback
     ) => {
+        return;
         if (!state) {
             state = (await runtime.composeState(message)) as State;
         }
@@ -123,6 +124,7 @@ export const continueAction: Action = {
         const lastAgentMessage = agentMessages[0];
 
         if (lastAgentMessage?.content?.inReplyTo === message.id) {
+            return;
             // If our last message was already a response to this message, only allow continue if:
             // 1. The last message had a CONTINUE action
             // 2. We haven't hit the maxContinuesInARow limit
