@@ -129,12 +129,6 @@ export class TwitterInteractionClient {
                 )
             ).tweets;
 
-            elizaLogger.info("Twitter username:", twitterUsername);
-            elizaLogger.info(
-                "Mention candidates:",
-                JSON.stringify(mentionCandidates)
-            );
-
             elizaLogger.log(
                 "Completed checking mentioned tweets:",
                 mentionCandidates.length
