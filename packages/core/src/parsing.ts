@@ -147,9 +147,10 @@ export function parseJSONObjectFromText(
 
     if (jsonBlockMatch) {
         text = cleanJsonResponse(text);
-        const parsingText = normalizeJsonString(text);
+        // see issue 3779
+        //const parsingText = normalizeJsonString(text);
         try {
-            jsonData = JSON.parse(parsingText);
+            jsonData = JSON.parse(text);
         } catch (e) {
             console.error("Error parsing JSON:", e);
             console.error("Text is not JSON", text);
@@ -161,9 +162,10 @@ export function parseJSONObjectFromText(
 
         if (objectMatch) {
             text = cleanJsonResponse(text);
-            const parsingText = normalizeJsonString(text);
+            // see issue 3779
+            //const parsingText = normalizeJsonString(text);
             try {
-                jsonData = JSON.parse(parsingText);
+                jsonData = JSON.parse(text);
             } catch (e) {
                 console.error("Error parsing JSON:", e);
                 console.error("Text is not JSON", text);
@@ -236,18 +238,18 @@ export function extractAttributes(
 
 export const normalizeJsonString = (str: string) => {
     // Remove extra spaces after '{' and before '}'
-    str = str.replace(/\{\s+/, '{').replace(/\s+\}/, '}').trim();
+    str = str.replace(/\{\s+/, "{").replace(/\s+\}/, "}").trim();
 
     // "key": unquotedValue → "key": "unquotedValue"
     str = str.replace(
-      /("[\w\d_-]+")\s*: \s*(?!"|\[)([\s\S]+?)(?=(,\s*"|\}$))/g,
-      '$1: "$2"',
+        /("[\w\d_-]+")\s*: \s*(?!"|\[)([\s\S]+?)(?=(,\s*"|\}$))/g,
+        '$1: "$2"'
     );
 
     // "key": 'value' → "key": "value"
     str = str.replace(
-      /"([^"]+)"\s*:\s*'([^']*)'/g,
-      (_, key, value) => `"${key}": "${value}"`,
+        /"([^"]+)"\s*:\s*'([^']*)'/g,
+        (_, key, value) => `"${key}": "${value}"`
     );
 
     // "key": someWord → "key": "someWord"
