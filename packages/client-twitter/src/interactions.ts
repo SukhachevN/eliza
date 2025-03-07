@@ -429,31 +429,31 @@ export class TwitterInteractionClient {
         }
 
         // get usernames into str
-        const validTargetUsersStr =
-            this.client.twitterConfig.TWITTER_TARGET_USERS.join(",");
+        // const validTargetUsersStr =
+        //     this.client.twitterConfig.TWITTER_TARGET_USERS.join(",");
 
-        const shouldRespondContext = composeContext({
-            state,
-            template:
-                this.runtime.character.templates
-                    ?.twitterShouldRespondTemplate ||
-                this.runtime.character?.templates?.shouldRespondTemplate ||
-                twitterShouldRespondTemplate(validTargetUsersStr),
-        });
+        // const shouldRespondContext = composeContext({
+        //     state,
+        //     template:
+        //         this.runtime.character.templates
+        //             ?.twitterShouldRespondTemplate ||
+        //         this.runtime.character?.templates?.shouldRespondTemplate ||
+        //         twitterShouldRespondTemplate(validTargetUsersStr),
+        // });
 
-        const shouldRespond = await generateShouldRespond({
-            runtime: this.runtime,
-            context: shouldRespondContext,
-            modelClass: ModelClass.MEDIUM,
-        });
+        // const shouldRespond = await generateShouldRespond({
+        //     runtime: this.runtime,
+        //     context: shouldRespondContext,
+        //     modelClass: ModelClass.MEDIUM,
+        // });
 
         // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
-        if (shouldRespond !== "RESPOND") {
-            elizaLogger.info(
-                `Not responding to message with result: ${shouldRespond} to tweet: ${tweet.text} from ${tweet.username}`
-            );
-            return { text: "Response Decision:", action: shouldRespond };
-        }
+        // if (shouldRespond !== "RESPOND") {
+        //     elizaLogger.info(
+        //         `Not responding to message with result: ${shouldRespond} to tweet: ${tweet.text} from ${tweet.username}`
+        //     );
+        //     return { text: "Response Decision:", action: shouldRespond };
+        // }
 
         const context = composeContext({
             state: {
