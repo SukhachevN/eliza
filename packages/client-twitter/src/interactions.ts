@@ -557,7 +557,7 @@ export class TwitterInteractionClient {
                         ) {
                             responseMessage.content.action = response.action;
                         } else {
-                            responseMessage.content.action = "NONE";
+                            responseMessage.content.action = "CONTINUE";
                         }
                         await this.runtime.messageManager.createMemory(
                             responseMessage

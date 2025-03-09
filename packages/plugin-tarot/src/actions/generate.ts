@@ -68,7 +68,7 @@ export const getTarotPrediction = async (
         1) make sure you have the full picture of a user request - read both the tweet/thread/post that the comment you were tagged in belongs to and the comment where you've been tagged.
         2) respond to the user with a 3 card tarot spread and your corresponding card reading on behalf of tarotmancer; the reading must follow the rules below. 
         3) after sending the spread and the reading, don't send anything else (including text and actions, especially CONTINUE).
-        Notes: don't send interim results, do send only the spread and reading.
+        Notes: DONT SEND INTERIM RESULTS, DO SEND ONLY THE SPREAD AND READING, DONT ADD ANY OTHER TEXT.
 
         The drawn cards are:
         ${cardsDescription}
@@ -185,6 +185,7 @@ const generate: Action = {
     similes: [],
     examples: [],
     description: "Generate a tarot prediction based on the current market",
+    suppressInitialMessage: true,
     validate: async (
         runtime: IAgentRuntime,
         _message: Memory,
@@ -240,6 +241,8 @@ const generate: Action = {
             return true;
         }
 
+        elizaLogger.info(`Not responding to ${text}`);
+
         return false;
     },
     handler: async (
@@ -249,8 +252,6 @@ const generate: Action = {
         _options: unknown,
         _callback: HandlerCallback
     ) => {
-        elizaLogger.info(_state.postDirections);
-
         const { media, prediction } = await getTarotPrediction(
             _runtime,
             _state,
