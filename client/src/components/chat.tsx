@@ -49,10 +49,11 @@ export default function Page({ agentId }: { agentId: UUID }) {
     const getMessageVariant = (role: string) =>
         role !== "user" ? "received" : "sent";
 
-    const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
-        smooth: true,
-    });
-   
+    const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } =
+        useAutoScroll({
+            smooth: true,
+        });
+
     useEffect(() => {
         scrollToBottom();
     }, [queryClient.getQueryData(["messages", agentId])]);
@@ -173,7 +174,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
     return (
         <div className="flex flex-col w-full h-[calc(100dvh)] p-4">
             <div className="flex-1 overflow-y-auto">
-                <ChatMessageList 
+                <ChatMessageList
                     scrollRef={scrollRef}
                     isAtBottom={isAtBottom}
                     scrollToBottom={scrollToBottom}
@@ -214,14 +215,29 @@ export default function Page({ agentId }: { agentId: UUID }) {
                                             {/* Attachments */}
                                             <div>
                                                 {message?.attachments?.map(
-                                                    (attachment: IAttachment) => (
+                                                    (
+                                                        attachment: IAttachment
+                                                    ) => (
                                                         <div
                                                             className="flex flex-col gap-1 mt-2"
                                                             key={`${attachment.url}-${attachment.title}`}
                                                         >
                                                             <img
                                                                 alt="attachment"
-                                                                src={attachment.url}
+                                                                src={
+                                                                    message?.user ===
+                                                                    "user"
+                                                                        ? attachment.url
+                                                                        : attachment.url.startsWith(
+                                                                              "http"
+                                                                          )
+                                                                        ? attachment.url
+                                                                        : `http://localhost:3000/media/generated/${attachment.url
+                                                                              .split(
+                                                                                  "/"
+                                                                              )
+                                                                              .pop()}`
+                                                                }
                                                                 width="100%"
                                                                 height="100%"
                                                                 className="w-64 rounded-md"

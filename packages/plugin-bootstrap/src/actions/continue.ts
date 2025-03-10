@@ -96,6 +96,19 @@ export const continueAction: Action = {
         }
         state = await runtime.updateRecentMessageState(state);
 
+        const existingResponse = state.recentMessagesData.find(
+            (m) =>
+                m.content.inReplyTo === message.id &&
+                m.userId === runtime.agentId
+        );
+
+        if (existingResponse) {
+            elizaLogger.info(
+                `[CONTINUE] Already responded to this message, skipping ${message.content.text}`
+            );
+            return;
+        }
+
         // Get the agent's recent messages
         const agentMessages = state.recentMessagesData
             .filter((m: { userId: any }) => m.userId === runtime.agentId)
@@ -110,6 +123,7 @@ export const continueAction: Action = {
         const lastAgentMessage = agentMessages[0];
 
         if (lastAgentMessage?.content?.inReplyTo === message.id) {
+            return;
             // If our last message was already a response to this message, only allow continue if:
             // 1. The last message had a CONTINUE action
             // 2. We haven't hit the maxContinuesInARow limit

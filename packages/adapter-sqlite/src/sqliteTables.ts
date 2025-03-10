@@ -108,6 +108,24 @@ CREATE TABLE IF NOT EXISTS "knowledge" (
     CHECK((isShared = 1 AND agentId IS NULL) OR (isShared = 0 AND agentId IS NOT NULL))
 );
 
+-- Table: plugin-tarot-logs
+CREATE TABLE IF NOT EXISTS "plugin-tarot-logs" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "content" TEXT NOT NULL
+);
+
+-- Table: bitcoin-predictions-with-allora
+CREATE TABLE IF NOT EXISTS "bitcoin-predictions-with-allora" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "directionRightness" TEXT,
+    "priceRightness" TEXT,
+    "direction" TEXT,
+    "bitcoinCurrentPrice" REAL,
+    "bitcoinPredictedPrice" REAL
+);
+
 -- Index: relationships_id_key
 CREATE UNIQUE INDEX IF NOT EXISTS "relationships_id_key" ON "relationships" ("id");
 
