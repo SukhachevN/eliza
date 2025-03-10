@@ -44,9 +44,13 @@ export const getTarotPrediction = async (
         })
         .join("\n");
 
+    const defaultUserRequest =
+        "spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet";
+
     insertTarotLog(
         runtime.databaseAdapter.db,
-        `cardsDescription: ${cardsDescription}`
+        `cardsDescription: ${cardsDescription}\n
+        userRequest: ${message?.content.text || defaultUserRequest}`
     );
 
     const contextTemplate = `
@@ -73,12 +77,12 @@ export const getTarotPrediction = async (
         The drawn cards are:
         ${cardsDescription}
 
-        # User request:
-        ${message?.content.text}
+        User request:
+        ${message?.content.text || defaultUserRequest}
 
         Rules for the prediction:
         1. link the meanings of the cards provided with the content and context of the tweet and comment you're tagged in - try your best to make the reading as personalized as possible.
-        2. total lenght of your reply must fit twitter limitations (strictly less than or equal to 280 characters).
+        2. total lenght of your reply must fit twitter limitations (strictly less than or equal to 260 characters).
         3. the reply must be lowercased and contain no hashtags and emojis.
 
         Examples of valid responses:
