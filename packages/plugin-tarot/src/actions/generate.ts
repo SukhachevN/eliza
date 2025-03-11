@@ -245,7 +245,10 @@ const generate: Action = {
             return true;
         }
 
-        elizaLogger.info(`Not responding to ${text}`);
+        insertTarotLog(
+            runtime.databaseAdapter.db,
+            `Not spreading tarot to user request: ${text}`
+        );
 
         return false;
     },
