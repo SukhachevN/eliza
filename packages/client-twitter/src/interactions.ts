@@ -283,7 +283,12 @@ export class TwitterInteractionClient {
                             tweetId
                         );
 
-                    if (existingResponse) {
+                    const isReallyExistingResponse =
+                        await this.runtime.cacheManager.get(
+                            `twitter/tweet_generation_${tweet.id}.txt`
+                        );
+
+                    if (existingResponse && isReallyExistingResponse) {
                         elizaLogger.log(
                             `Already responded to tweet ${tweet.id}, skipping`
                         );
