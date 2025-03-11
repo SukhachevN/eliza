@@ -47,10 +47,29 @@ export const getTarotPrediction = async (
     const defaultUserRequest =
         "spread 3 card tarot based on the provided tarot cards for today for the token of your choice and write a tweet";
 
+    const repliesChain = [];
+
+    let lastReplyId = message?.content.inReplyTo;
+
+    while (true) {
+        const reply = await runtime.messageManager.getMemoryById(lastReplyId);
+
+        if (!reply) {
+            break;
+        }
+
+        repliesChain.push(reply);
+
+        lastReplyId = reply.content.inReplyTo;
+    }
+
     insertTarotLog(
         runtime.databaseAdapter.db,
         `cardsDescription: ${cardsDescription}\n
-        userRequest: ${message?.content.text || defaultUserRequest}`
+        userRequest: ${message?.content.text || defaultUserRequest}\n
+        repliesChain: ${repliesChain
+            .map((reply) => reply.content.text)
+            .join("\n")}`
     );
 
     const contextTemplate = `
@@ -76,6 +95,9 @@ export const getTarotPrediction = async (
 
         The drawn cards are:
         ${cardsDescription}
+
+        Replies chain:
+        ${repliesChain.map((reply) => reply.content.text).join("\n")}
 
         User request:
         ${message?.content.text || defaultUserRequest}
