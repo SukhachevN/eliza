@@ -146,35 +146,37 @@ export const getTarotPrediction = async (
 
     const notCheckedPrediction = await generateWithRetry(runtime, context);
     const checkPredictionContext = `
-         # Areas of Expertise
-         {{knowledge}}
- 
-         # About {{agentName}} (@{{twitterUserName}}):
-         {{bio}}
-         {{lore}}
-         {{topics}}
- 
-         {{providers}}
- 
-         {{characterPostExamples}}
- 
-         {{postDirections}}
- 
-         Task:
-         1) Check if the following prediction exceeds 250 characters:
-         "${notCheckedPrediction}"
- 
-         2) If it does exceed 250 characters, rewrite it to be shorter while maintaining the same structure:
-         - keep the same cards interpretation
-         - keep the format "I. [card] - [meaning]"
-         - keep the "tldr" part
-         - use shorter synonyms and remove unnecessary words
-         - ensure the total length is strictly less than 250 characters
- 
-         3) If the original prediction is already under 250 characters, return it unchanged.
- 
-         4) Return only the final prediction text, without any additional comments or explanations.
-     `;
+        Task:
+        Validate and potentially rewrite the following tarot prediction:
+        "${notCheckedPrediction}"
+
+        Requirements:
+        1. STRICT CHARACTER LIMIT: Must be 240 characters or less (including spaces and newlines)
+        2. REQUIRED STRUCTURE:
+           - First line: brief intro (max 30 chars)
+           - Three card readings in format: "I. [card] - [interpretation]"
+           - Final line: "tldr - [conclusion]"
+        3. FORMATTING:
+           - All text must be lowercase
+           - Use "\n" for line breaks
+           - No hashtags, emojis, or special characters
+           - No mentions or URLs
+
+        If the prediction exceeds 240 characters:
+        1. Maintain exact same meaning and cards
+        2. Aggressively shorten by:
+           - Using shorter words (e.g., "use" instead of "utilize")
+           - Removing articles (a, an, the)
+           - Using abbreviations (e.g., "r" for "are")
+           - Removing unnecessary words
+        3. Keep critical elements:
+           - Card numbers (I., II., III.)
+           - Card names
+           - Core interpretations
+           - tldr section
+
+        Return only the final prediction text, no explanations or metadata.
+    `;
 
     const prediction = await generateWithRetry(runtime, checkPredictionContext);
 

@@ -292,7 +292,8 @@ export class TwitterInteractionClient {
                             tweet.username,
                             tweet.text,
                             "SKIP RESPONDED TWEET",
-                            ""
+                            "Previously responded to tweet: " +
+                                existingResponse.content.text
                         );
                         continue;
                     }
@@ -632,6 +633,13 @@ export class TwitterInteractionClient {
                         } else {
                             responseMessage.content.action = "CONTINUE";
                         }
+                        insertTwitterInteractionLog(
+                            this.runtime.databaseAdapter.db,
+                            tweet.username,
+                            tweet.text,
+                            "CREATE MEMORY",
+                            responseMessage.content.text
+                        );
                         await this.runtime.messageManager.createMemory(
                             responseMessage
                         );
@@ -650,6 +658,15 @@ export class TwitterInteractionClient {
                         }
                     );
 
+                    await insertTwitterInteractionLog(
+                        this.runtime.databaseAdapter.db,
+                        tweet.username,
+                        tweet.text,
+                        "PROCEED ACTIONS",
+                        responseMessages[responseMessages.length - 1]?.content
+                            ?.text
+                    );
+
                     const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
 
                     await this.runtime.cacheManager.set(
@@ -660,6 +677,13 @@ export class TwitterInteractionClient {
                 } catch (error) {
                     elizaLogger.error(
                         `Error sending response tweet: ${error?.message}`
+                    );
+                    await insertTwitterInteractionLog(
+                        this.runtime.databaseAdapter.db,
+                        tweet.username,
+                        tweet.text,
+                        "ERROR SENDING TWEET",
+                        error?.message
                     );
                 }
             }
