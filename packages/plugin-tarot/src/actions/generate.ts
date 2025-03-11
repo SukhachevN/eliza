@@ -104,7 +104,7 @@ export const getTarotPrediction = async (
 
         Rules for the prediction:
         1. link the meanings of the cards provided with the content and context of the tweet and comment you're tagged in - try your best to make the reading as personalized as possible.
-        2. total lenght of your reply must fit twitter limitations (strictly less than or equal to 260 characters).
+        2. total lenght of your reply must fit twitter limitations (strictly less than or equal to 250 characters).
         3. the reply must be lowercased and contain no hashtags and emojis.
 
         Examples of valid responses:
@@ -143,6 +143,39 @@ export const getTarotPrediction = async (
         state,
         template: contextTemplate,
     });
+
+    const notCheckedPrediction = await generateWithRetry(runtime, context);
+
+    const checkPredictionContext = `
+        # Areas of Expertise
+        {{knowledge}}
+
+        # About {{agentName}} (@{{twitterUserName}}):
+        {{bio}}
+        {{lore}}
+        {{topics}}
+
+        {{providers}}
+
+        {{characterPostExamples}}
+
+        {{postDirections}}
+
+        Task:
+        1) Check if the following prediction exceeds 250 characters:
+        "${notCheckedPrediction}"
+
+        2) If it does exceed 250 characters, rewrite it to be shorter while maintaining the same structure:
+        - keep the same cards interpretation
+        - keep the format "I. [card] - [meaning]"
+        - keep the "tldr" part
+        - use shorter synonyms and remove unnecessary words
+        - ensure the total length is strictly less than 250 characters
+
+        3) If the original prediction is already under 250 characters, return it unchanged.
+
+        4) Return only the final prediction text, without any additional comments or explanations.
+    `;
 
     const prediction = await generateWithRetry(runtime, context);
 
