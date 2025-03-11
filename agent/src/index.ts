@@ -1125,6 +1125,51 @@ app.get("/bitcoin-predictions-with-allora", async (req, res) => {
     }
 });
 
+app.get("/twitter-interactions-logs", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    try {
+        const [memories, totalCount] = await Promise.all([
+            dbAdapter.db
+                .prepare(
+                    `SELECT id, createdAt, username, tweet, action, response FROM "twitter-interactions-logs" 
+                     ORDER BY createdAt DESC 
+                     LIMIT ? OFFSET ?`
+                )
+                .all(limit, offset),
+
+            dbAdapter.db
+                .prepare(
+                    `SELECT COUNT(*) as count 
+                     FROM "twitter-interactions-logs"`
+                )
+                .get(),
+        ]);
+
+        const totalPages = Math.ceil(totalCount.count / limit);
+
+        res.json({
+            data: memories,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems: totalCount.count,
+                itemsPerPage: limit,
+            },
+        });
+    } catch (error) {
+        elizaLogger.error(
+            "Error fetching twitter-interactions-logs:",
+            error?.message
+        );
+        res.status(500).json({
+            error: error?.message || "Internal server error",
+        });
+    }
+});
+
 app.get("/bitcoin-predictions-accuracy", async (req, res) => {
     const from = req.query.from
         ? req.query.from.toString()

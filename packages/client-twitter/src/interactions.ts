@@ -16,6 +16,7 @@ import {
     getEmbeddingZeroVector,
     type IImageDescriptionService,
     ServiceType,
+    DatabaseAdapter,
 } from "@elizaos/core";
 import type { ClientBase } from "./base";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
@@ -94,6 +95,27 @@ Thread of Tweets You Are Replying To:
 
 # INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
 ` + shouldRespondFooter;
+
+export const insertTwitterInteractionLog = async (
+    db: DatabaseAdapter["db"],
+    username: string,
+    tweet: string,
+    action: string,
+    response: string
+) => {
+    try {
+        const query = `
+            INSERT INTO "twitter-interactions-logs" (username, tweet, action, response)
+            VALUES (?, ?, ?, ?)
+    `;
+
+        await db.prepare(query).run(username, tweet, action, response);
+    } catch (error) {
+        elizaLogger.error(
+            `Error inserting twitter interaction log: ${error?.message}`
+        );
+    }
+};
 
 export class TwitterInteractionClient {
     client: ClientBase;
@@ -308,7 +330,10 @@ export class TwitterInteractionClient {
 
             elizaLogger.log("Finished checking Twitter interactions");
         } catch (error) {
-            elizaLogger.error("Error handling Twitter interactions:", error);
+            elizaLogger.error(
+                "Error handling Twitter interactions:",
+                error?.message
+            );
         }
     }
 
@@ -333,9 +358,15 @@ export class TwitterInteractionClient {
 
         if (!message.content.text) {
             elizaLogger.log("Skipping Tweet with no text", tweet.id);
+            await insertTwitterInteractionLog(
+                this.runtime.databaseAdapter.db,
+                tweet.username,
+                tweet.text,
+                "IGNORE",
+                ""
+            );
             return { text: "", action: "IGNORE" };
         }
-
         elizaLogger.log("Processing Tweet: ", tweet.id);
         const formatTweet = (tweet: Tweet) => {
             return `  ID: ${tweet.id}
@@ -448,6 +479,14 @@ export class TwitterInteractionClient {
             elizaLogger.info(
                 `Not responding to message with result: ${shouldRespond} to tweet: ${tweet.text} from ${tweet.username}`
             );
+            await insertTwitterInteractionLog(
+                this.runtime.databaseAdapter.db,
+                tweet.username,
+                tweet.text,
+                shouldRespond,
+                ""
+            );
+
             return { text: "Response Decision:", action: shouldRespond };
         }
 
@@ -500,6 +539,14 @@ export class TwitterInteractionClient {
         response.inReplyTo = stringId;
 
         response.text = removeQuotes(response.text);
+
+        await insertTwitterInteractionLog(
+            this.runtime.databaseAdapter.db,
+            tweet.username,
+            tweet.text,
+            "RESPOND",
+            response.text
+        );
 
         if (response.text) {
             if (this.isDryRun) {
@@ -587,7 +634,9 @@ export class TwitterInteractionClient {
                     );
                     await wait();
                 } catch (error) {
-                    elizaLogger.error(`Error sending response tweet: ${error}`);
+                    elizaLogger.error(
+                        `Error sending response tweet: ${error?.message}`
+                    );
                 }
             }
         }

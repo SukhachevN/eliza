@@ -126,6 +126,16 @@ CREATE TABLE IF NOT EXISTS "bitcoin-predictions-with-allora" (
     "bitcoinPredictedPrice" REAL
 );
 
+-- Table: twitter-interactions-logs
+CREATE TABLE IF NOT EXISTS "twitter-interactions-logs" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "username" TEXT NOT NULL,
+    "tweet" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "response" TEXT NOT NULL
+);
+
 -- Index: relationships_id_key
 CREATE UNIQUE INDEX IF NOT EXISTS "relationships_id_key" ON "relationships" ("id");
 
