@@ -287,6 +287,13 @@ export class TwitterInteractionClient {
                         elizaLogger.log(
                             `Already responded to tweet ${tweet.id}, skipping`
                         );
+                        insertTwitterInteractionLog(
+                            this.runtime.databaseAdapter.db,
+                            tweet.username,
+                            tweet.text,
+                            "SKIP RESPONDED TWEET",
+                            ""
+                        );
                         continue;
                     }
                     elizaLogger.log("New Tweet found", tweet.permanentUrl);
@@ -363,6 +370,13 @@ export class TwitterInteractionClient {
                 tweet.username
             )
         ) {
+            await insertTwitterInteractionLog(
+                this.runtime.databaseAdapter.db,
+                tweet.username,
+                tweet.text,
+                "SKIP SELF TWEET",
+                ""
+            );
             return;
         }
 
@@ -554,7 +568,7 @@ export class TwitterInteractionClient {
             this.runtime.databaseAdapter.db,
             tweet.username,
             tweet.text,
-            "RESPOND",
+            response.action,
             response.text
         );
 
