@@ -153,15 +153,16 @@ export class TwitterInteractionClient {
                 )
             ).tweets;
 
-            insertTwitterInteractionLog(
-                this.runtime.databaseAdapter.db,
-                twitterUsername,
-                mentionCandidates
-                    .map((tweet) => `@${tweet.username}: ${tweet.text}`)
-                    .join("\n"),
-                "LOAD MENTIONS",
-                ""
-            );
+            mentionCandidates.length > 0 &&
+                insertTwitterInteractionLog(
+                    this.runtime.databaseAdapter.db,
+                    twitterUsername,
+                    mentionCandidates
+                        .map((tweet) => `@${tweet.username}: ${tweet.text}`)
+                        .join("\n"),
+                    "LOAD MENTIONS",
+                    ""
+                );
 
             elizaLogger.log(
                 "Completed checking mentioned tweets:",
@@ -638,13 +639,6 @@ export class TwitterInteractionClient {
                         } else {
                             responseMessage.content.action = "CONTINUE";
                         }
-                        insertTwitterInteractionLog(
-                            this.runtime.databaseAdapter.db,
-                            tweet.username,
-                            tweet.text,
-                            "CREATE MEMORY",
-                            responseMessage.content.text
-                        );
                         await this.runtime.messageManager.createMemory(
                             responseMessage
                         );
