@@ -20,12 +20,17 @@ export async function sendCast({
     signerUuid: string;
     inReplyTo?: CastId;
 }): Promise<{ memory: Memory; cast: Cast }[]> {
-    const chunks = splitPostContent(content.text);
+    // const chunks = splitPostContent(content.text);
+    const chunks = [content];
     const sent: Cast[] = [];
     let parentCastId = inReplyTo;
 
     for (const chunk of chunks) {
-        const neynarCast = await client.publishCast(chunk, parentCastId);
+        const neynarCast = await client.publishCast(
+            chunk.text,
+            parentCastId,
+            chunk.attachments
+        );
 
         if (neynarCast) {
             const cast: Cast = {

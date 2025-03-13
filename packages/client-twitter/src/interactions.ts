@@ -70,19 +70,17 @@ Response options are RESPOND, IGNORE and STOP.
 PRIORITY RULE: ALWAYS RESPOND to these users regardless of topic or message content: ${targetUsersStr}. Topic relevance should be ignored for these users.
 
 For other users:
-- {{agentName}} should RESPOND to messages directed at them.
-- {{agentName}} should RESPOND to any conversation where their input would be meaningful or engaging.
-- {{agentName}} should RESPOND even if the message is short, as long as it makes sense.
-- {{agentName}} should IGNORE only if the message is completely meaningless (random characters, only emojis, incoherent text).
-- {{agentName}} should IGNORE messages that appear to be spam or an attempt to exploit/hack the system.
-- {{agentName}} should STOP if asked to stop.
-- {{agentName}} should STOP if the conversation is clearly concluded.
-- {{agentName}} wants to be active in discussions, engaging with users whenever possible.
+- {{agentName}} should RESPOND to messages directed at them
+- {{agentName}} should RESPOND to conversations relevant to their background
+- {{agentName}} should IGNORE irrelevant messages
+- {{agentName}} should IGNORE very short messages unless directly addressed
+- {{agentName}} should STOP if asked to stop
+- {{agentName}} should STOP if conversation is concluded
+- {{agentName}} is in a room with other users and wants to be conversational, but not annoying.
 
 IMPORTANT:
-- {{agentName}} (aka @{{twitterUserName}}) prefers responding rather than ignoring, unless the message is clearly meaningless.
-- {{agentName}} should prioritize engagement and participation while ensuring responses remain relevant.
-- {{agentName}} should avoid excessive responses in a single thread unless the conversation is ongoing.
+- {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
+- For users not in the priority list, {{agentName}} (@{{twitterUserName}}) should err on the side of IGNORE rather than RESPOND if in doubt.
 
 Recent Posts:
 {{recentPosts}}
@@ -153,7 +151,7 @@ export class TwitterInteractionClient {
                 )
             ).tweets;
 
-            mentionCandidates.length > 0 &&
+            if (mentionCandidates.length > 0) {
                 insertTwitterInteractionLog(
                     this.runtime.databaseAdapter.db,
                     twitterUsername,
@@ -163,7 +161,7 @@ export class TwitterInteractionClient {
                     "LOAD MENTIONS",
                     ""
                 );
-
+            }
             elizaLogger.log(
                 "Completed checking mentioned tweets:",
                 mentionCandidates.length
@@ -349,9 +347,13 @@ export class TwitterInteractionClient {
 
             elizaLogger.log("Finished checking Twitter interactions");
         } catch (error) {
-            elizaLogger.error(
-                "Error handling Twitter interactions:",
-                error?.message
+            elizaLogger.error("Error handling Twitter interactions:", error);
+            insertTwitterInteractionLog(
+                this.runtime.databaseAdapter.db,
+                this.client.twitterConfig.TWITTER_USERNAME,
+                `Error handling Twitter interactions: ${error?.message}`,
+                "ERROR",
+                ""
             );
         }
     }
@@ -372,27 +374,14 @@ export class TwitterInteractionClient {
                 tweet.username
             )
         ) {
-            await insertTwitterInteractionLog(
-                this.runtime.databaseAdapter.db,
-                tweet.username,
-                tweet.text,
-                "SKIP SELF TWEET",
-                ""
-            );
             return;
         }
 
         if (!message.content.text) {
             elizaLogger.log("Skipping Tweet with no text", tweet.id);
-            await insertTwitterInteractionLog(
-                this.runtime.databaseAdapter.db,
-                tweet.username,
-                tweet.text,
-                "IGNORE",
-                ""
-            );
             return { text: "", action: "IGNORE" };
         }
+
         elizaLogger.log("Processing Tweet: ", tweet.id);
         const formatTweet = (tweet: Tweet) => {
             return `  ID: ${tweet.id}
@@ -502,17 +491,7 @@ export class TwitterInteractionClient {
 
         // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
         if (shouldRespond !== "RESPOND") {
-            elizaLogger.info(
-                `Not responding to message with result: ${shouldRespond} to tweet: ${tweet.text} from ${tweet.username}`
-            );
-            await insertTwitterInteractionLog(
-                this.runtime.databaseAdapter.db,
-                tweet.username,
-                tweet.text,
-                shouldRespond,
-                ""
-            );
-
+            elizaLogger.log("Not responding to message");
             return { text: "Response Decision:", action: shouldRespond };
         }
 
@@ -557,6 +536,14 @@ export class TwitterInteractionClient {
             modelClass: ModelClass.LARGE,
         });
 
+        insertTwitterInteractionLog(
+            this.runtime.databaseAdapter.db,
+            this.client.twitterConfig.TWITTER_USERNAME,
+            tweet.text,
+            response.action,
+            response.text
+        );
+
         const removeQuotes = (str: string) =>
             str.replace(/^['"](.*)['"]$/, "$1");
 
@@ -565,14 +552,6 @@ export class TwitterInteractionClient {
         response.inReplyTo = stringId;
 
         response.text = removeQuotes(response.text);
-
-        await insertTwitterInteractionLog(
-            this.runtime.databaseAdapter.db,
-            tweet.username,
-            tweet.text,
-            response.action,
-            response.text
-        );
 
         if (response.text) {
             if (this.isDryRun) {
@@ -652,15 +631,6 @@ export class TwitterInteractionClient {
                         }
                     );
 
-                    await insertTwitterInteractionLog(
-                        this.runtime.databaseAdapter.db,
-                        tweet.username,
-                        tweet.text,
-                        "PROCEED ACTIONS",
-                        responseMessages[responseMessages.length - 1]?.content
-                            ?.text
-                    );
-
                     const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
 
                     await this.runtime.cacheManager.set(
@@ -669,15 +639,13 @@ export class TwitterInteractionClient {
                     );
                     await wait();
                 } catch (error) {
-                    elizaLogger.error(
-                        `Error sending response tweet: ${error?.message}`
-                    );
-                    await insertTwitterInteractionLog(
+                    elizaLogger.error(`Error sending response tweet: ${error}`);
+                    insertTwitterInteractionLog(
                         this.runtime.databaseAdapter.db,
-                        tweet.username,
-                        tweet.text,
-                        "ERROR SENDING TWEET",
-                        error?.message
+                        this.client.twitterConfig.TWITTER_USERNAME,
+                        `Error sending response tweet: ${error}`,
+                        "ERROR",
+                        ""
                     );
                 }
             }
